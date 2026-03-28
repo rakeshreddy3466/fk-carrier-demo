@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FK Caseworker Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f2; min-height: 100vh; }
+    .header { background: #006298; color: white; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-logo { font-size: 20px; font-weight: 700; }
+    .header-sub { font-size: 13px; opacity: 0.85; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 16px; }
+    .header-badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+    .main { display: flex; height: calc(100vh - 64px); }
+    .sidebar { width: 320px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 16px; border-bottom: 1px solid #eee; }
+    .sidebar-header h2 { font-size: 15px; color: #333; margin-bottom: 8px; }
+    .sidebar-header input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .app-list { flex: 1; overflow-y: auto; }
+    .app-item { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.15s; }
+    .app-item:hover { background: #f8f9fa; }
+    .app-item.active { background: #e3f2fd; border-left: 3px solid #006298; }
+    .app-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .app-item-name { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+    .app-item-date { font-size: 11px; color: #888; }
+    .app-item-pnr { font-size: 12px; color: #666; margin-bottom: 4px; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d4edda; color: #155724; }
+    .status-rejected { background: #f8d7da; color: #721c24; }
+    .status-review { background: #d1ecf1; color: #0c5460; }
+    .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .content-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #888; font-size: 15px; }
+    .detail-view { flex: 1; display: flex; overflow: hidden; }
+    .detail-left { flex: 1; overflow-y: auto; padding: 24px; border-right: 1px solid #ddd; }
+    .detail-right { width: 340px; overflow-y: auto; padding: 20px; background: #fafafa; }
+    .section { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; margin-bottom: 16px; }
+    .section h3 { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+    .chat-msg { display: flex; gap: 10px; margin-bottom: 12px; }
+    .chat-msg.user { flex-direction: row-reverse; }
+    .chat-avatar { width: 28px; height: 28px; border-radius: 50%; background: #006298; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+    .chat-msg.user .chat-avatar { background: #555; }
+    .chat-bubble { background: #f5f5f5; border-radius: 10px; padding: 8px 12px; font-size: 13px; line-height: 1.5; color: #222; max-width: 80%; white-space: pre-wrap; }
+    .chat-msg.user .chat-bubble { background: #006298; color: white; }
+    .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #666; }
+    .info-value { color: #1a1a1a; font-weight: 500; text-align: right; }
+    .assessment-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.6; color: #333; white-space: pre-wrap; min-height: 100px; }
+    .btn { padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-approve { background: #28a745; color: white; }
+    .btn-reject { background: #dc3545; color: white; }
+    .btn-request { background: #ffc107; color: #333; }
+    .btn:hover { opacity: 0.9; }
+    .decision-row { display: flex; gap: 8px; margin-top: 12px; }
+    .loading { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+    .empty-list { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+    .refresh-btn { background: none; border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .refresh-btn:hover { background: rgba(255,255,255,0.1); }
+    .tag { display: inline-block; background: #e3f2fd; color: #0d47a1; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-right: 4px; margin-bottom: 4px; }
+    textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; resize: vertical; min-height: 80px; outline: none; font-family: inherit; }
+    textarea:focus { border-color: #006298; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">Försäkringskassan</div>
+    <div class="header-sub">Caseworker Dashboard</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="header-badge" id="count-badge">Loading...</span>
+    <button class="refresh-btn" onclick="loadApplications()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Applications</h2>
+      <input type="text" id="search-input" placeholder="Search by name or ID..." oninput="filterApps()" />
+    </div>
+    <div class="app-list" id="app-list">
+      <div class="loading">Loading applications...</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="content-empty" id="empty-state">← Select an application to review</div>
+    <div class="detail-view hidden" id="detail-view">
+
+      <div class="detail-left">
+
+        <div class="section">
+          <h3>Customer Information</h3>
+          <div id="customer-info"></div>
+        </div>
+
+        <div class="section">
+          <h3>Conversation with AI Agent</h3>
+          <div id="chat-log"></div>
+        </div>
+
+        <div class="section">
+          <h3>AI Agent Assessment</h3>
+          <div class="assessment-box" id="assessment-text">No assessment available.</div>
+        </div>
+
+      </div>
+
+      <div class="detail-right">
+
+        <div class="section">
+          <h3>Application Details</h3>
+          <div id="app-details"></div>
+        </div>
+
+        <div class="section">
+          <h3>Caseworker Notes</h3>
+          <textarea id="caseworker-notes" placeholder="Add your notes here..."></textarea>
+        </div>
+
+        <div class="section">
+          <h3>Decision</h3>
+          <p style="font-size:13px;color:#666;margin-bottom:12px">Review the application and make a decision:</p>
+          <div class="decision-row">
+            <button class="btn btn-approve" onclick="makeDecision('approved')">✓ Approve</button>
+            <button class="btn btn-reject" onclick="makeDecision('rejected')">✗ Reject</button>
+          </div>
+          <div style="margin-top:8px">
+            <button class="btn btn-request" style="width:100%" onclick="makeDecision('more_info')">⚠ Request More Info</button>
+          </div>
+          <div id="decision-result" style="margin-top:12px;font-size:13px;display:none"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://kmgyuwmixsdxtpxorrzc.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZ3l1d21peHNkeHRweG9ycnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODkzNjQsImV4cCI6MjA5MDI2NTM2NH0.y9D9WTdSHnfRZ4MdJU8Lw0Wvgr5je1NH7Kr5Es9558Q';
+
+  let allApps = [];
+  let selectedApp = null;
+
+  async function supabase(path, options = {}) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+        ...options.headers
+      },
+      ...options
+    });
+    return res.json();
+  }
+
+  async function loadApplications() {
+    document.getElementById('app-list').innerHTML = '<div class="loading">Loading...</div>';
+    try {
+      const apps = await supabase('applications?select=*,customers(full_name,email)&order=created_at.desc');
+      allApps = Array.isArray(apps) ? apps : [];
+      document.getElementById('count-badge').textContent = allApps.length + ' application' + (allApps.length !== 1 ? 's' : '');
+      renderList(allApps);
+    } catch(e) {
+      document.getElementById('app-list').innerHTML = '<div class="empty-list">Error loading applications</div>';
+    }
+  }
+
+  function renderList(apps) {
+    const list = document.getElementById('app-list');
+    if (!apps.length) {
+      list.innerHTML = '<div class="empty-list">No applications yet.<br>Submit one from the customer UI!</div>';
+      return;
+    }
+    list.innerHTML = apps.map((app, i) => `
+      <div class="app-item ${selectedApp?.id === app.id ? 'active' : ''}" onclick="selectApp(${i})">
+        <div class="app-item-top">
+          <span class="app-item-name">${app.customers?.full_name || app.personnummer || 'Unknown'}</span>
+          <span class="app-item-date">${formatDate(app.created_at)}</span>
+        </div>
+        <div class="app-item-pnr">${app.personnummer || '–'}</div>
+        <span class="status-badge status-${app.status === 'pending_review' ? 'pending' : app.status}">${formatStatus(app.status)}</span>
+      </div>
+    `).join('');
+  }
+
+  function filterApps() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const filtered = allApps.filter(a =>
+      (a.customers?.full_name || '').toLowerCase().includes(q) ||
+      (a.personnummer || '').includes(q)
+    );
+    renderList(filtered);
+  }
+
+  function selectApp(index) {
+    selectedApp = allApps[index];
+    document.getElementById('empty-state').classList.add('hidden');
+    document.getElementById('detail-view').classList.remove('hidden');
+    document.getElementById('decision-result').style.display = 'none';
+    renderDetail(selectedApp);
+    renderList(allApps);
+  }
+
+  function renderDetail(app) {
+    const customer = app.customers || {};
+
+    document.getElementById('customer-info').innerHTML = `
+      <div class="info-row"><span class="info-label">Name</span><span class="info-value">${customer.full_name || '–'}</span></div>
+      <div class="info-row"><span class="info-label">Personal ID</span><span class="info-value">${app.personnummer || '–'}</span></div>
+      <div class="info-row"><span class="info-label">Email</span><span class="info-value">${customer.email || '–'}</span></div>
+      <div class="info-row"><span class="info-label">Employer</span><span class="info-value">${customer.employer || '–'}</span></div>
+      <div class="info-row"><span class="info-label">Employment type</span><span class="info-value">${customer.employment_type || '–'}</span></div>
+      <div class="info-row"><span class="info-label">Monthly income</span><span class="info-value">${customer.monthly_income ? customer.monthly_income + ' SEK' : '–'}</span></div>
+    `;
+
+    document.getElementById('app-details').innerHTML = `
+      <div class="info-row"><span class="info-label">Application ID</span><span class="info-value" style="font-size:11px">${app.id?.substring(0,8)}...</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-value"><span class="status-badge status-${app.status === 'pending_review' ? 'pending' : app.status}">${formatStatus(app.status)}</span></span></div>
+      <div class="info-row"><span class="info-label">Submitted</span><span class="info-value">${formatDate(app.created_at)}</span></div>
+    `;
+
+    const chatLog = document.getElementById('chat-log');
+    const history = app.chat_log || [];
+    if (history.length) {
+      chatLog.innerHTML = history.map(msg => `
+        <div class="chat-msg ${msg.role === 'user' ? 'user' : ''}">
+          <div class="chat-avatar">${msg.role === 'user' ? 'C' : 'FK'}</div>
+          <div class="chat-bubble">${msg.content}</div>
+        </div>
+      `).join('');
+    } else {
+      chatLog.innerHTML = '<p style="color:#888;font-size:13px">No conversation recorded.</p>';
+    }
+
+    document.getElementById('assessment-text').textContent = app.agent_assessment || 'No assessment available.';
+    document.getElementById('caseworker-notes').value = app.caseworker_notes || '';
+  }
+
+  async function makeDecision(decision) {
+    if (!selectedApp) return;
+    const notes = document.getElementById('caseworker-notes').value;
+    const result = document.getElementById('decision-result');
+
+    try {
+      await supabase(`applications?id=eq.${selectedApp.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: decision, caseworker_notes: notes, decision: decision })
+      });
+
+      selectedApp.status = decision;
+      result.style.display = 'block';
+      result.style.color = decision === 'approved' ? '#28a745' : decision === 'rejected' ? '#dc3545' : '#856404';
+      result.textContent = decision === 'approved' ? '✓ Application approved!' : decision === 'rejected' ? '✗ Application rejected.' : '⚠ More information requested.';
+      renderList(allApps);
+    } catch(e) {
+      result.style.display = 'block';
+      result.style.color = '#dc3545';
+      result.textContent = 'Error saving decision.';
+    }
+  }
+
+  function formatDate(str) {
+    if (!str) return '–';
+    return new Date(str).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatStatus(s) {
+    const map = { pending_review: 'Pending Review', approved: 'Approved', rejected: 'Rejected', more_info: 'More Info Needed' };
+    return map[s] || s || 'Unknown';
+  }
+
+  loadApplications();
+</script>
+</body>
+</html>
