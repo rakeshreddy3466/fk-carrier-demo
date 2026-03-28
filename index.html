@@ -77,12 +77,10 @@
   </style>
 </head>
 <body>
-
 <div class="header">
   <div class="header-logo">Social Insurance Agency</div>
   <div class="header-sub">Application for carrier allowance</div>
 </div>
-
 <div class="steps">
   <div class="step" id="step1"><div class="step-num">1</div> Identification</div>
   <div class="step-arrow">›</div>
@@ -94,7 +92,6 @@
   <div class="step-arrow">›</div>
   <div class="step" id="step5"><div class="step-num">5</div> Clear</div>
 </div>
-
 <div class="main">
   <div class="container">
     <div class="card" id="login-screen">
@@ -106,7 +103,6 @@
       </div>
       <button class="btn" id="login-btn" onclick="startSession()">Log in</button>
     </div>
-
     <div class="customer-banner hidden" id="customer-banner">
       <div style="font-size:22px">✓</div>
       <div>
@@ -114,7 +110,6 @@
         <span>Information retrieved from system</span>
       </div>
     </div>
-
     <div class="chat-card hidden" id="chat-card">
       <div class="chat-header">
         <div class="dot"></div>
@@ -129,17 +124,15 @@
         <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
       </div>
     </div>
-
     <div class="complete-banner hidden" id="complete-banner">
       <h3>✅ Application submitted!</h3>
       <p>Your application has been saved and sent to a caseworker for review. You will receive a response within 5 working days.</p>
     </div>
   </div>
 </div>
-
 <script>
   const WEBHOOK_URL = 'https://demoprototype.app.n8n.cloud/webhook/fk-carrier-chat';
-  let chatHistory = [], sessionId = '', personnummer = '', isWaiting = false;
+  let chatHistory = [], sessionId = '', personnummer = '', isWaiting = false, uploadCount = 0;
 
   function setStep(n) {
     for (let i = 1; i <= 5; i++) {
@@ -190,57 +183,28 @@
     return uploadCount % 2 === 0 ? 'medical' : 'employer';
   }
 
-  let uploadCount = 0;
-
   async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     event.target.value = '';
     uploadCount++;
-
     const docType = getDocType(file.name);
     const c = document.getElementById('chat-messages');
     const el = document.createElement('div');
     el.className = 'file-bubble ' + docType;
-
     let ocrLines, shortMsg;
-
     if (docType === 'medical') {
-      ocrLines = [
-        '👤 Patient: Rakesh Reddy Karri (19700101-1234)',
-        '🦠 Diagnosis: COVID-19 – Confirmed Carrier',
-        '📅 Period: 2026-03-15 to 2026-03-25',
-        '👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital',
-        '✅ Certificate fully covers absence period'
-      ];
+      ocrLines = ['👤 Patient: Rakesh Reddy Karri (19700101-1234)','🦠 Diagnosis: COVID-19 – Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Certificate fully covers absence period'];
       shortMsg = 'Medical certificate uploaded. Patient: Rakesh Reddy Karri, ID: 19700101-1234, Diagnosis: COVID-19 carrier, Period: 2026-03-15 to 2026-03-25, Doctor: Dr Anna Bergstrom.';
     } else {
-      ocrLines = [
-        '👤 Employee: Rakesh Reddy Karri (19700101-1234)',
-        '🏢 Employer: Volvo AB (Org: 556014-0440)',
-        '💼 Position: Senior Engineer – Permanent',
-        '💰 Monthly Salary: SEK 42,000',
-        '📅 Employed since: 2015-03-01'
-      ];
-      shortMsg = 'Employer certificate uploaded. Employee: Rakesh Reddy Karri, Employer: Volvo AB, Org: 556014-0440, Salary: 42000 SEK, Permanent employment since 2015-03-01.';
+      ocrLines = ['👤 Employee: Rakesh Reddy Karri (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Position: Senior Engineer – Permanent','💰 Monthly Salary: SEK 42,000','📅 Employed since: 2015-03-01'];
+      shortMsg = 'Employer certificate uploaded. Employee: Rakesh Reddy Karri, Employer: Volvo AB, Org: 556014-0440, Salary: 42000 SEK, Permanent since 2015-03-01.';
     }
-
-    el.innerHTML = `
-      <div class="file-icon">${docType === 'medical' ? '🏥' : '🏢'}</div>
-      <div class="file-info">
-        <strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong>
-        <div class="file-type">${docType === 'medical' ? 'Medical Certificate' : 'Employer Certificate'}</div>
-        <div class="ocr-data">${ocrLines.join('<br>')}</div>
-      </div>`;
+    el.innerHTML = `<div class="file-icon">${docType==='medical'?'🏥':'🏢'}</div><div class="file-info"><strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong><div class="file-type">${docType==='medical'?'Medical Certificate':'Employer Certificate'}</div><div class="ocr-data">${ocrLines.join('<br>')}</div></div>`;
     c.appendChild(el);
     c.scrollTop = c.scrollHeight;
-
     setStep(3);
-    // KEY FIX: only send last 6 messages for document uploads to prevent timeout
-    const savedHistory = chatHistory;
-    chatHistory = chatHistory.slice(-6);
     await sendToAgent(shortMsg);
-    chatHistory = savedHistory.concat(chatHistory.slice(-2));
   }
 
   async function sendMessage() {
@@ -282,9 +246,9 @@
     document.getElementById('send-btn').disabled = false;
   }
 
-  async function callWebhook(message) {
-    // Always send max 8 messages to prevent timeout
-    const trimmedHistory = chatHistory.slice(-8);
+  async function callWebhook(message, attempt) {
+    attempt = attempt || 1;
+    const trimmedHistory = chatHistory.slice(-6);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -292,8 +256,33 @@
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     let text = (await response.text()).trim();
+
+    // Strip leading = if present (n8n bug)
     if (text.startsWith('=')) text = text.substring(1);
-    return JSON.parse(text);
+
+    // If empty, retry once after 1.5 seconds
+    if (!text || text === '{}' || text === '[]') {
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 1500));
+        return callWebhook(message, attempt + 1);
+      }
+      throw new Error('Empty response');
+    }
+
+    // Find JSON start in case there is a prefix
+    const jsonStart = text.indexOf('{');
+    if (jsonStart > 0) text = text.substring(jsonStart);
+
+    try {
+      return JSON.parse(text);
+    } catch(e) {
+      // Retry on parse error
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 1500));
+        return callWebhook(message, attempt + 1);
+      }
+      throw new Error('Parse error');
+    }
   }
 
   function appendMessage(role, text) {
