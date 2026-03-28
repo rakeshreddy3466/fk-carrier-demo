@@ -50,7 +50,6 @@
     .file-bubble.medical { background: #fce4ec; border: 1px solid #f48fb1; }
     .file-bubble.employer { background: #e3f2fd; border: 1px solid #90caf9; }
     .file-bubble .file-icon { font-size: 24px; flex-shrink: 0; }
-    .file-bubble .file-info strong { display: block; font-size: 13px; margin-bottom: 2px; }
     .file-type { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
     .file-bubble.medical .file-type { background: #e91e63; color: white; }
     .file-bubble.employer .file-type { background: #1976d2; color: white; }
@@ -98,7 +97,6 @@
 
 <div class="main">
   <div class="container">
-
     <div class="card" id="login-screen">
       <h2>Log in with your personal ID number</h2>
       <p>Enter your personal identification number to start your application for carrier allowance.</p>
@@ -136,7 +134,6 @@
       <h3>✅ Application submitted!</h3>
       <p>Your application has been saved and sent to a caseworker for review. You will receive a response within 5 working days.</p>
     </div>
-
   </div>
 </div>
 
@@ -188,7 +185,7 @@
 
   function getDocType(filename) {
     const f = filename.toLowerCase();
-    if (f.includes('medical') || f.includes('med_') || f.includes('doctor')) return 'medical';
+    if (f.includes('medical') || f.includes('doctor') || f.includes('med_')) return 'medical';
     if (f.includes('employer') || f.includes('emp_') || f.includes('volvo') || f.includes('payslip') || f.includes('salary')) return 'employer';
     return uploadCount % 2 === 0 ? 'medical' : 'employer';
   }
@@ -216,7 +213,7 @@
         '👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital',
         '✅ Certificate fully covers absence period'
       ];
-      shortMsg = 'Medical certificate uploaded. Patient: Rakesh Reddy Karri, ID: 19700101-1234, Diagnosis: COVID-19 carrier, Period: 2026-03-15 to 2026-03-25, Doctor: Dr Anna Bergstrom, Karolinska Hospital.';
+      shortMsg = 'Medical certificate uploaded. Patient: Rakesh Reddy Karri, ID: 19700101-1234, Diagnosis: COVID-19 carrier, Period: 2026-03-15 to 2026-03-25, Doctor: Dr Anna Bergstrom.';
     } else {
       ocrLines = [
         '👤 Employee: Rakesh Reddy Karri (19700101-1234)',
@@ -225,7 +222,7 @@
         '💰 Monthly Salary: SEK 42,000',
         '📅 Employed since: 2015-03-01'
       ];
-      shortMsg = 'Employer certificate uploaded. Employee: Rakesh Reddy Karri, ID: 19700101-1234, Employer: Volvo AB, Org: 556014-0440, Position: Senior Engineer, Employment: permanent, Start: 2015-03-01, Salary: 42000 SEK.';
+      shortMsg = 'Employer certificate uploaded. Employee: Rakesh Reddy Karri, Employer: Volvo AB, Org: 556014-0440, Salary: 42000 SEK, Permanent employment since 2015-03-01.';
     }
 
     el.innerHTML = `
@@ -239,7 +236,11 @@
     c.scrollTop = c.scrollHeight;
 
     setStep(3);
+    // KEY FIX: only send last 6 messages for document uploads to prevent timeout
+    const savedHistory = chatHistory;
+    chatHistory = chatHistory.slice(-6);
     await sendToAgent(shortMsg);
+    chatHistory = savedHistory.concat(chatHistory.slice(-2));
   }
 
   async function sendMessage() {
@@ -269,7 +270,7 @@
       } else {
         const r = (res.reply || '').toLowerCase();
         if (r.includes('sending it to a caseworker') || r.includes('application is complete')) setStep(4);
-        else if (r.includes('upload') || r.includes('document') || r.includes('certificate') || r.includes('paperclip')) setStep(3);
+        else if (r.includes('upload') || r.includes('document') || r.includes('certificate')) setStep(3);
         else setStep(2);
       }
     } catch(e) {
@@ -282,10 +283,12 @@
   }
 
   async function callWebhook(message) {
+    // Always send max 8 messages to prevent timeout
+    const trimmedHistory = chatHistory.slice(-8);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ personnummer, message, chatHistory, sessionId, step: 'chat' })
+      body: JSON.stringify({ personnummer, message, chatHistory: trimmedHistory, sessionId, step: 'chat' })
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     let text = (await response.text()).trim();
