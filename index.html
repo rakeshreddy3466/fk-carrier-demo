@@ -131,8 +131,22 @@
   </div>
 </div>
 <script>
-  const WEBHOOK_URL = 'https://demoprototype.app.n8n.cloud/webhook/fk-carrier-chat';
-  let chatHistory = [], sessionId = '', personnummer = '', isWaiting = false, uploadCount = 0;
+  const CLAUDE_KEY = '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';
+  const SUPABASE_URL = 'https://kmgyuwmixsdxtpxorrzc.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZ3l1d21peHNkeHRweG9ycnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODkzNjQsImV4cCI6MjA5MDI2NTM2NH0.y9D9WTdSHnfRZ4MdJU8Lw0Wvgr5je1NH7Kr5Es9558Q';
+
+  const SYSTEM_PROMPT = `You are an AI caseworker for the Swedish Social Insurance Agency (Försäkringskassan) processing carrier allowance applications. Always respond in English. Be professional and concise. Today is March 28, 2026.
+
+Collect information in this exact order:
+
+STEP 1 - IDENTITY & CONTACT: Collect full name, personal ID, email, phone.
+STEP 2 - WORK & INCOME: Collect employer, employment type, start date, monthly income SEK, income loss period.
+STEP 3 - CARRIER STATUS: Collect infection type, who recommended not working, recommendation date.
+STEP 4 - DOCUMENTS: Ask customer to upload medical certificate and employer certificate using the paperclip button.
+STEP 5 - VALIDATION: When documents uploaded, validate names match, dates cover absence period, org number correct.
+STEP 6 - COMPLETE: Say EXACTLY when done: "Your application is complete. I am now sending it to a caseworker for review." Then give full structured summary.`;
+
+  let chatHistory = [], personnummer = '', isWaiting = false, uploadCount = 0, customerContext = '';
 
   function setStep(n) {
     for (let i = 1; i <= 5; i++) {
@@ -140,46 +154,54 @@
     }
   }
 
+  async function fetchCustomer(pnr) {
+    try {
+      const r = await fetch(SUPABASE_URL + '/rest/v1/customers?personnummer=eq.' + pnr + '&select=*', {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
+      const data = await r.json();
+      if (data && data.length > 0) {
+        const c = data[0];
+        customerContext = 'Customer found in system - Name: ' + c.full_name + ', ID: ' + c.personnummer + ', Email: ' + c.email + ', Phone: ' + c.phone + ', Employer: ' + c.employer + ', Employment type: ' + c.employment_type + ', Monthly income: ' + c.monthly_income + ' SEK, Employed since: ' + c.employment_start;
+        document.getElementById('customer-banner').classList.remove('hidden');
+        document.getElementById('customer-name').textContent = c.full_name;
+        return c;
+      }
+    } catch(e) { console.error('Customer fetch:', e); }
+    return null;
+  }
+
+  async function saveToSupabase(reply) {
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/applications', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        body: JSON.stringify({ personnummer, status: 'pending_review', chat_log: chatHistory, agent_assessment: reply })
+      });
+      console.log('Application saved to Supabase');
+    } catch(e) { console.error('Save error:', e); }
+  }
+
   async function startSession() {
     const pnr = document.getElementById('pnr-input').value.trim();
     if (!pnr) { alert('Please enter your personal ID number'); return; }
     personnummer = pnr;
-    sessionId = 'session_' + Date.now();
     const btn = document.getElementById('login-btn');
     btn.disabled = true;
     btn.textContent = 'Retrieving data...';
-    try {
-      const res = await callWebhook('Hello, I want to apply for carrier allowance');
-      document.getElementById('login-screen').classList.add('hidden');
-      if (res.customerFound) {
-        document.getElementById('customer-banner').classList.remove('hidden');
-        document.getElementById('customer-name').textContent = extractName(res.chatHistory || []) || personnummer;
-      }
-      document.getElementById('chat-card').classList.remove('hidden');
-      chatHistory = res.chatHistory || [];
-      setStep(2);
-      appendMessage('agent', res.reply);
-    } catch(e) {
-      btn.disabled = false;
-      btn.textContent = 'Log in';
-      alert('Error: ' + e.message);
-    }
-  }
-
-  function extractName(history) {
-    const names = ['Anna Lindqvist','Erik Johansson','Sara Nilsson','Lars Bergström','Maria Svensson'];
-    for (const msg of history) {
-      for (const n of names) {
-        if (msg.content && msg.content.includes(n.split(' ')[0])) return n;
-      }
-    }
-    return null;
+    await fetchCustomer(pnr);
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('chat-card').classList.remove('hidden');
+    setStep(2);
+    await sendToAgent('Hello, I want to apply for carrier allowance.');
+    btn.disabled = false;
+    btn.textContent = 'Log in';
   }
 
   function getDocType(filename) {
     const f = filename.toLowerCase();
     if (f.includes('medical') || f.includes('doctor') || f.includes('med_')) return 'medical';
-    if (f.includes('employer') || f.includes('emp_') || f.includes('volvo') || f.includes('payslip') || f.includes('salary')) return 'employer';
+    if (f.includes('employer') || f.includes('emp_') || f.includes('volvo') || f.includes('payslip')) return 'employer';
     return uploadCount % 2 === 0 ? 'medical' : 'employer';
   }
 
@@ -192,19 +214,19 @@
     const c = document.getElementById('chat-messages');
     const el = document.createElement('div');
     el.className = 'file-bubble ' + docType;
-    let ocrLines, shortMsg;
+    let ocrLines, msg;
     if (docType === 'medical') {
-      ocrLines = ['👤 Patient: Rakesh Reddy Karri (19700101-1234)','🦠 Diagnosis: COVID-19 – Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Certificate fully covers absence period'];
-      shortMsg = 'Medical certificate uploaded. Patient: Rakesh Reddy Karri, ID: 19700101-1234, Diagnosis: COVID-19 carrier, Period: 2026-03-15 to 2026-03-25, Doctor: Dr Anna Bergstrom.';
+      ocrLines = ['👤 Patient: Rakesh Reddy Karri (19700101-1234)','🦠 Diagnosis: COVID-19 – Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Fully covers absence period'];
+      msg = 'Medical certificate uploaded. OCR: Patient: Rakesh Reddy Karri, ID: 19700101-1234, Diagnosis: COVID-19 confirmed carrier, Period: 2026-03-15 to 2026-03-25, Doctor: Dr Anna Bergstrom, Karolinska Hospital.';
     } else {
-      ocrLines = ['👤 Employee: Rakesh Reddy Karri (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Position: Senior Engineer – Permanent','💰 Monthly Salary: SEK 42,000','📅 Employed since: 2015-03-01'];
-      shortMsg = 'Employer certificate uploaded. Employee: Rakesh Reddy Karri, Employer: Volvo AB, Org: 556014-0440, Salary: 42000 SEK, Permanent since 2015-03-01.';
+      ocrLines = ['👤 Employee: Rakesh Reddy Karri (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Senior Engineer – Permanent','💰 SEK 42,000/month','📅 Since 2015-03-01'];
+      msg = 'Employer certificate uploaded. OCR: Employee: Rakesh Reddy Karri, ID: 19700101-1234, Employer: Volvo AB, Org: 556014-0440, Role: Senior Engineer, Type: Permanent, Salary: 42000 SEK/month, Since: 2015-03-01.';
     }
     el.innerHTML = `<div class="file-icon">${docType==='medical'?'🏥':'🏢'}</div><div class="file-info"><strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong><div class="file-type">${docType==='medical'?'Medical Certificate':'Employer Certificate'}</div><div class="ocr-data">${ocrLines.join('<br>')}</div></div>`;
     c.appendChild(el);
     c.scrollTop = c.scrollHeight;
     setStep(3);
-    await sendToAgent(shortMsg);
+    await sendToAgent(msg);
   }
 
   async function sendMessage() {
@@ -222,79 +244,48 @@
     isWaiting = true;
     document.getElementById('send-btn').disabled = true;
     try {
-      const res = await callWebhook(text);
-      chatHistory = res.chatHistory || chatHistory;
+      const msgs = chatHistory.slice(-8);
+      msgs.push({ role: 'user', content: text });
+      const sys = SYSTEM_PROMPT + (customerContext ? '\n\n' + customerContext : '');
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': CLAUDE_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, system: sys, messages: msgs })
+      });
+      const data = await response.json();
+      if (!data.content) throw new Error(JSON.stringify(data));
+      const reply = data.content[0].text;
+      chatHistory.push({ role: 'user', content: text });
+      chatHistory.push({ role: 'assistant', content: reply });
       hideTyping();
-      appendMessage('agent', res.reply);
-      if (res.isComplete) {
+      appendMessage('agent', reply);
+      const r = reply.toLowerCase();
+      const isComplete = r.indexOf('your application is complete. i am now sending it to a caseworker for review') > -1;
+      if (isComplete) {
+        await saveToSupabase(reply);
         setStep(5);
         document.getElementById('complete-banner').classList.remove('hidden');
         document.getElementById('chat-input').disabled = true;
         document.getElementById('send-btn').disabled = true;
+      } else if (r.includes('upload') || r.includes('certificate') || r.includes('paperclip')) {
+        setStep(3);
+      } else if (r.includes('sending') || r.includes('caseworker')) {
+        setStep(4);
       } else {
-        const r = (res.reply || '').toLowerCase();
-        if (r.includes('sending it to a caseworker') || r.includes('application is complete')) setStep(4);
-        else if (r.includes('upload') || r.includes('document') || r.includes('certificate')) setStep(3);
-        else setStep(2);
+        setStep(2);
       }
     } catch(e) {
       hideTyping();
       appendMessage('agent', 'Something went wrong. Please try again.');
-      console.error(e);
+      console.error('Error:', e);
     }
     isWaiting = false;
     document.getElementById('send-btn').disabled = false;
-  }
-
-  function parseResponse(text) {
-    // Remove leading = if present
-    if (text.startsWith('=')) text = text.substring(1);
-    text = text.trim();
-    
-    // Try direct parse first
-    try { return JSON.parse(text); } catch(e) {}
-    
-    // If it's an array, get first item
-    if (text.startsWith('[')) {
-      try {
-        const arr = JSON.parse(text);
-        if (arr.length > 0) return arr[0].json || arr[0];
-      } catch(e) {}
-    }
-    
-    // Find JSON object anywhere in string
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      try { return JSON.parse(text.substring(start, end + 1)); } catch(e) {}
-    }
-    
-    throw new Error('Cannot parse response: ' + text.substring(0, 100));
-  }
-
-  async function callWebhook(message, attempt) {
-    attempt = attempt || 1;
-    const trimmedHistory = chatHistory.slice(-4);
-    const response = await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ personnummer, message, chatHistory: trimmedHistory, sessionId, step: 'chat' })
-    });
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const text = await response.text();
-    console.log('Raw response attempt ' + attempt + ':', text.substring(0, 200));
-    
-    // If empty, retry up to 3 times with 2 second delay
-    if (!text || text.trim() === '') {
-      if (attempt < 3) {
-        console.log('Empty response, retrying in 2s...');
-        await new Promise(r => setTimeout(r, 2000));
-        return callWebhook(message, attempt + 1);
-      }
-      throw new Error('Empty response after 3 attempts');
-    }
-    
-    return parseResponse(text);
   }
 
   function appendMessage(role, text) {
