@@ -246,8 +246,33 @@
     document.getElementById('send-btn').disabled = false;
   }
 
-  async function callWebhook(message, attempt) {
-    attempt = attempt || 1;
+  function parseResponse(text) {
+    // Remove leading = if present
+    if (text.startsWith('=')) text = text.substring(1);
+    text = text.trim();
+    
+    // Try direct parse first
+    try { return JSON.parse(text); } catch(e) {}
+    
+    // If it's an array, get first item
+    if (text.startsWith('[')) {
+      try {
+        const arr = JSON.parse(text);
+        if (arr.length > 0) return arr[0].json || arr[0];
+      } catch(e) {}
+    }
+    
+    // Find JSON object anywhere in string
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try { return JSON.parse(text.substring(start, end + 1)); } catch(e) {}
+    }
+    
+    throw new Error('Cannot parse response: ' + text.substring(0, 100));
+  }
+
+  async function callWebhook(message) {
     const trimmedHistory = chatHistory.slice(-6);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
@@ -255,34 +280,9 @@
       body: JSON.stringify({ personnummer, message, chatHistory: trimmedHistory, sessionId, step: 'chat' })
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
-    let text = (await response.text()).trim();
-
-    // Strip leading = if present (n8n bug)
-    if (text.startsWith('=')) text = text.substring(1);
-
-    // If empty, retry once after 1.5 seconds
-    if (!text || text === '{}' || text === '[]') {
-      if (attempt < 3) {
-        await new Promise(r => setTimeout(r, 1500));
-        return callWebhook(message, attempt + 1);
-      }
-      throw new Error('Empty response');
-    }
-
-    // Find JSON start in case there is a prefix
-    const jsonStart = text.indexOf('{');
-    if (jsonStart > 0) text = text.substring(jsonStart);
-
-    try {
-      return JSON.parse(text);
-    } catch(e) {
-      // Retry on parse error
-      if (attempt < 3) {
-        await new Promise(r => setTimeout(r, 1500));
-        return callWebhook(message, attempt + 1);
-      }
-      throw new Error('Parse error');
-    }
+    const text = await response.text();
+    console.log('Raw response:', text.substring(0, 200));
+    return parseResponse(text);
   }
 
   function appendMessage(role, text) {
