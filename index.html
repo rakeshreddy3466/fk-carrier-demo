@@ -272,7 +272,8 @@
     throw new Error('Cannot parse response: ' + text.substring(0, 100));
   }
 
-  async function callWebhook(message) {
+  async function callWebhook(message, attempt) {
+    attempt = attempt || 1;
     const trimmedHistory = chatHistory.slice(-4);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
@@ -281,7 +282,18 @@
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const text = await response.text();
-    console.log('Raw response:', text.substring(0, 200));
+    console.log('Raw response attempt ' + attempt + ':', text.substring(0, 200));
+    
+    // If empty, retry up to 3 times with 2 second delay
+    if (!text || text.trim() === '') {
+      if (attempt < 3) {
+        console.log('Empty response, retrying in 2s...');
+        await new Promise(r => setTimeout(r, 2000));
+        return callWebhook(message, attempt + 1);
+      }
+      throw new Error('Empty response after 3 attempts');
+    }
+    
     return parseResponse(text);
   }
 
