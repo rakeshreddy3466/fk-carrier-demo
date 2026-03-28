@@ -32,7 +32,6 @@
     .btn:disabled { background: #aaa; cursor: not-allowed; }
     .customer-banner { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 14px 18px; display: flex; align-items: center; gap: 12px; }
     .customer-banner strong { font-size: 15px; color: #1b5e20; display: block; }
-    .customer-banner span { font-size: 13px; color: #388e3c; }
     .chat-card { background: white; border-radius: 10px; border: 1px solid #ddd; display: flex; flex-direction: column; height: 560px; }
     .chat-header { padding: 14px 18px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
     .chat-header .dot { width: 10px; height: 10px; border-radius: 50%; background: #4caf50; }
@@ -52,10 +51,10 @@
     .file-bubble.employer { background: #e3f2fd; border: 1px solid #90caf9; }
     .file-bubble .file-icon { font-size: 24px; flex-shrink: 0; }
     .file-bubble .file-info strong { display: block; font-size: 13px; margin-bottom: 2px; }
-    .file-bubble .file-info .file-type { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
+    .file-type { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
     .file-bubble.medical .file-type { background: #e91e63; color: white; }
     .file-bubble.employer .file-type { background: #1976d2; color: white; }
-    .file-bubble .ocr-data { font-size: 11px; line-height: 1.5; margin-top: 4px; }
+    .ocr-data { font-size: 11px; line-height: 1.6; margin-top: 4px; }
     .file-bubble.medical .ocr-data { color: #880e4f; }
     .file-bubble.employer .ocr-data { color: #0d47a1; }
     .ocr-badge { background: #4caf50; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: 6px; }
@@ -67,7 +66,7 @@
     .chat-input-area { padding: 10px 14px; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center; }
     .chat-input-area input[type="text"] { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 24px; font-size: 14px; outline: none; background: #f9f9f9; }
     .chat-input-area input[type="text"]:focus { border-color: #006298; background: white; }
-    .upload-btn { background: #f0f4f8; border: 1px solid #ddd; color: #555; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+    .upload-btn { background: #f0f4f8; border: 1px solid #ddd; color: #555; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .upload-btn:hover { background: #e3f2fd; border-color: #90caf9; color: #006298; }
     .send-btn { background: #006298; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer; flex-shrink: 0; }
     .send-btn:disabled { background: #aaa; cursor: not-allowed; }
@@ -102,7 +101,7 @@
 
     <div class="card" id="login-screen">
       <h2>Log in with your personal ID number</h2>
-      <p>Enter your personal identification number to start your application for carrier allowance. We will automatically retrieve your information from our systems.</p>
+      <p>Enter your personal identification number to start your application for carrier allowance.</p>
       <div class="input-group">
         <label>Personal ID number (YYYYMMDD-XXXX)</label>
         <input type="text" id="pnr-input" placeholder="19700101-1234" maxlength="13" onkeydown="if(event.key==='Enter')startSession()" />
@@ -127,7 +126,7 @@
       <div class="chat-messages" id="chat-messages"></div>
       <div class="chat-input-area">
         <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileUpload(event)" />
-        <button class="upload-btn" onclick="document.getElementById('file-input').click()" title="Upload document (PDF, JPG, PNG)">📎</button>
+        <button class="upload-btn" onclick="document.getElementById('file-input').click()" title="Upload document">📎</button>
         <input type="text" id="chat-input" placeholder="Write your answer here..." onkeydown="handleKey(event)" />
         <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
       </div>
@@ -164,8 +163,7 @@
       document.getElementById('login-screen').classList.add('hidden');
       if (res.customerFound) {
         document.getElementById('customer-banner').classList.remove('hidden');
-        const name = extractName(res.chatHistory || []);
-        document.getElementById('customer-name').textContent = name || personnummer;
+        document.getElementById('customer-name').textContent = extractName(res.chatHistory || []) || personnummer;
       }
       document.getElementById('chat-card').classList.remove('hidden');
       chatHistory = res.chatHistory || [];
@@ -188,15 +186,10 @@
     return null;
   }
 
-  function detectDocumentType(filename) {
-    const name = filename.toLowerCase();
-    if (name.includes('medical') || name.includes('med_') || name.includes('doctor') || name.includes('certificate') && name.includes('med')) {
-      return 'medical';
-    }
-    if (name.includes('employer') || name.includes('emp_') || name.includes('volvo') || name.includes('salary') || name.includes('payslip')) {
-      return 'employer';
-    }
-    // Default based on position - first upload = medical, second = employer
+  function getDocType(filename) {
+    const f = filename.toLowerCase();
+    if (f.includes('medical') || f.includes('med_') || f.includes('doctor')) return 'medical';
+    if (f.includes('employer') || f.includes('emp_') || f.includes('volvo') || f.includes('payslip') || f.includes('salary')) return 'employer';
     return uploadCount % 2 === 0 ? 'medical' : 'employer';
   }
 
@@ -206,74 +199,47 @@
     const file = event.target.files[0];
     if (!file) return;
     event.target.value = '';
-
-    const docType = detectDocumentType(file.name);
     uploadCount++;
 
+    const docType = getDocType(file.name);
     const c = document.getElementById('chat-messages');
-    const msgEl = document.createElement('div');
-    msgEl.className = 'file-bubble ' + docType;
+    const el = document.createElement('div');
+    el.className = 'file-bubble ' + docType;
 
-    let ocrData, ocrMessage, docLabel;
+    let ocrLines, shortMsg;
 
     if (docType === 'medical') {
-      docLabel = 'Medical Certificate';
-      ocrData = [
-        '👤 Patient: Rakesh Reddy Karri',
-        '🪪 Personal ID: 19700101-1234',
-        '🦠 Diagnosis: COVID-19 (SARS-CoV-2) – Confirmed Carrier',
-        '📅 Certificate Date: 2026-03-15',
-        '📅 Absence Period: 2026-03-15 to 2026-03-25',
-        '👩‍⚕️ Physician: Dr. Anna Bergström, Karolinska Hospital',
-        '✅ Period Coverage: FULL – Matches claimed absence'
-      ].join('\n');
-      ocrMessage = `I have uploaded my Medical Certificate. OCR extracted the following data:
-- Patient Name: Rakesh Reddy Karri
-- Personal ID: 19700101-1234
-- Diagnosis: COVID-19 (SARS-CoV-2) Confirmed Carrier
-- Certificate Date: 2026-03-15
-- Absence Period Covered: 2026-03-15 to 2026-03-25
-- Physician: Dr. Anna Bergström, Karolinska Hospital
-- Certificate fully covers the claimed absence period: YES
-File: ${file.name}`;
+      ocrLines = [
+        '👤 Patient: Rakesh Reddy Karri (19700101-1234)',
+        '🦠 Diagnosis: COVID-19 – Confirmed Carrier',
+        '📅 Period: 2026-03-15 to 2026-03-25',
+        '👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital',
+        '✅ Certificate fully covers absence period'
+      ];
+      shortMsg = 'Medical certificate uploaded. Patient: Rakesh Reddy Karri, ID: 19700101-1234, Diagnosis: COVID-19 carrier, Period: 2026-03-15 to 2026-03-25, Doctor: Dr Anna Bergstrom, Karolinska Hospital.';
     } else {
-      docLabel = 'Employer Certificate';
-      ocrData = [
-        '👤 Employee: Rakesh Reddy Karri',
-        '🪪 Personal ID: 19700101-1234',
-        '🏢 Employer: Volvo AB',
-        '🔢 Org Number: 556014-0440',
-        '💼 Employment: Permanent Full-Time',
+      ocrLines = [
+        '👤 Employee: Rakesh Reddy Karri (19700101-1234)',
+        '🏢 Employer: Volvo AB (Org: 556014-0440)',
+        '💼 Position: Senior Engineer – Permanent',
         '💰 Monthly Salary: SEK 42,000',
-        '📅 Absence Period: 2026-03-15 to 2026-03-25',
-        '📞 HR Contact: hr@volvo.se',
-        '✅ Employer confirms: Employee was instructed not to work'
-      ].join('\n');
-      ocrMessage = `I have uploaded my Employer Certificate. OCR extracted the following data:
-- Employee Name: Rakesh Reddy Karri
-- Personal ID: 19700101-1234
-- Employer: Volvo AB
-- Organization Number: 556014-0440
-- Employment Type: Permanent Full-Time
-- Monthly Salary: SEK 42,000
-- Absence Period: 2026-03-15 to 2026-03-25
-- HR Contact: hr@volvo.se
-- Employer confirms employee was instructed to stay home: YES
-File: ${file.name}`;
+        '📅 Employed since: 2015-03-01'
+      ];
+      shortMsg = 'Employer certificate uploaded. Employee: Rakesh Reddy Karri, ID: 19700101-1234, Employer: Volvo AB, Org: 556014-0440, Position: Senior Engineer, Employment: permanent, Start: 2015-03-01, Salary: 42000 SEK.';
     }
 
-    msgEl.innerHTML = `
+    el.innerHTML = `
       <div class="file-icon">${docType === 'medical' ? '🏥' : '🏢'}</div>
       <div class="file-info">
         <strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong>
-        <div class="file-type">${docLabel}</div>
-        <div class="ocr-data">${ocrData}</div>
+        <div class="file-type">${docType === 'medical' ? 'Medical Certificate' : 'Employer Certificate'}</div>
+        <div class="ocr-data">${ocrLines.join('<br>')}</div>
       </div>`;
-    c.appendChild(msgEl);
+    c.appendChild(el);
     c.scrollTop = c.scrollHeight;
 
     setStep(3);
-    await sendToAgent(ocrMessage);
+    await sendToAgent(shortMsg);
   }
 
   async function sendMessage() {
@@ -302,9 +268,9 @@ File: ${file.name}`;
         document.getElementById('send-btn').disabled = true;
       } else {
         const r = (res.reply || '').toLowerCase();
-        if (r.includes('sending it to a caseworker') || r.includes('complete')) setStep(4);
+        if (r.includes('sending it to a caseworker') || r.includes('application is complete')) setStep(4);
         else if (r.includes('upload') || r.includes('document') || r.includes('certificate') || r.includes('paperclip')) setStep(3);
-        else if (r.includes('step 2') || r.includes('employment') || r.includes('income')) setStep(2);
+        else setStep(2);
       }
     } catch(e) {
       hideTyping();
