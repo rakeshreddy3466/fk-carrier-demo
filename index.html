@@ -247,12 +247,19 @@
   }
 
   function parseResponse(text) {
+    if (!text || text.trim() === '') throw new Error('Empty response');
     if (text.startsWith('=')) text = text.substring(1);
     text = text.trim();
+    // Direct parse
     try { return JSON.parse(text); } catch(e) {}
+    // Array format from allIncomingItems - [{json:{...}}]
     if (text.startsWith('[')) {
-      try { const a = JSON.parse(text); if (a.length > 0) return a[0].json || a[0]; } catch(e) {}
+      try {
+        const a = JSON.parse(text);
+        if (a.length > 0) return a[0].json || a[0];
+      } catch(e) {}
     }
+    // Find JSON object
     const s = text.indexOf('{'), e2 = text.lastIndexOf('}');
     if (s >= 0 && e2 > s) { try { return JSON.parse(text.substring(s, e2+1)); } catch(e) {} }
     throw new Error('Cannot parse: ' + text.substring(0, 100));
