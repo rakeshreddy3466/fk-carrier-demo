@@ -83,7 +83,6 @@
 
 <div class="main">
   <div class="container">
-
     <div class="card" id="login-screen">
       <h2>Logga in med personnummer</h2>
       <p>Ange ditt personnummer för att starta din ansökan om smittbärarpennning. Vi hämtar automatiskt din information från våra system.</p>
@@ -119,7 +118,6 @@
       <h3>✅ Ansökan skickad!</h3>
       <p>Din ansökan har sparats och skickats till en handläggare för granskning. Du kommer att få svar inom 5 arbetsdagar.</p>
     </div>
-
   </div>
 </div>
 
@@ -156,7 +154,7 @@
     } catch(e) {
       btn.disabled = false;
       btn.textContent = 'Logga in';
-      alert('Kunde inte ansluta till servern.\n\nFelmeddelande: ' + e.message);
+      alert('Fel: ' + e.message);
     }
   }
 
@@ -191,34 +189,52 @@
         document.getElementById('chat-input').disabled = true;
         document.getElementById('send-btn').disabled = true;
       } else {
-        const r = res.reply.toLowerCase();
-        if (r.includes('intyg')||r.includes('dokument')||r.includes('ladda')) setStep(3);
-        else if (r.includes('granskning')||r.includes('sammanfattning')) setStep(4);
+        const r = (res.reply || '').toLowerCase();
+        if (r.includes('intyg') || r.includes('dokument')) setStep(3);
+        else if (r.includes('granskning')) setStep(4);
         else setStep(2);
       }
     } catch(e) {
       hideTyping();
       appendMessage('agent', 'Något gick fel. Försök igen.');
+      console.error(e);
     }
     isWaiting = false;
     document.getElementById('send-btn').disabled = false;
   }
 
   async function callWebhook(message) {
-    const res = await fetch(WEBHOOK_URL, {
+    const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ personnummer, message, chatHistory, sessionId, step: 'chat' })
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
-    return res.json();
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    
+    // Get the raw text first
+    const rawText = await response.text();
+    console.log('Raw response:', rawText.substring(0, 200));
+    
+    // Try to parse it - handle the case where n8n sends ={"reply":...} format
+    let text = rawText.trim();
+    if (text.startsWith('=')) {
+      text = text.substring(1);
+    }
+    
+    try {
+      return JSON.parse(text);
+    } catch(e) {
+      console.error('Parse error:', e, 'Raw:', rawText.substring(0, 500));
+      throw new Error('Ogiltigt svar från servern: ' + rawText.substring(0, 100));
+    }
   }
 
   function appendMessage(role, text) {
     const c = document.getElementById('chat-messages');
     const msg = document.createElement('div');
     msg.className = 'msg ' + role;
-    msg.innerHTML = `<div class="msg-avatar">${role==='agent'?'FK':'Du'}</div><div class="msg-bubble">${text}</div>`;
+    msg.innerHTML = '<div class="msg-avatar">'+(role==='agent'?'FK':'Du')+'</div><div class="msg-bubble"></div>';
+    msg.querySelector('.msg-bubble').textContent = text;
     c.appendChild(msg);
     c.scrollTop = c.scrollHeight;
   }
