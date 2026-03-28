@@ -20,8 +20,6 @@
     .step-arrow { color: #ccc; font-size: 14px; }
     .main { flex: 1; display: flex; justify-content: center; padding: 24px 16px; }
     .container { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 16px; }
-
-    /* LOGIN */
     .card { background: white; border-radius: 10px; border: 1px solid #ddd; padding: 28px; }
     .card h2 { font-size: 18px; color: #1a1a1a; margin-bottom: 8px; }
     .card p { font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.6; }
@@ -32,14 +30,10 @@
     .btn { background: #006298; color: white; border: none; padding: 12px 28px; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; }
     .btn:hover { background: #004f7a; }
     .btn:disabled { background: #aaa; cursor: not-allowed; }
-
-    /* CUSTOMER BANNER */
     .customer-banner { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 14px 18px; display: flex; align-items: center; gap: 12px; }
     .customer-banner strong { font-size: 15px; color: #1b5e20; display: block; }
     .customer-banner span { font-size: 13px; color: #388e3c; }
-
-    /* CHAT */
-    .chat-card { background: white; border-radius: 10px; border: 1px solid #ddd; display: flex; flex-direction: column; height: 540px; }
+    .chat-card { background: white; border-radius: 10px; border: 1px solid #ddd; display: flex; flex-direction: column; height: 560px; }
     .chat-header { padding: 14px 18px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
     .chat-header .dot { width: 10px; height: 10px; border-radius: 50%; background: #4caf50; }
     .chat-header span { font-size: 14px; font-weight: 600; color: #333; }
@@ -53,21 +47,23 @@
     .msg-bubble { background: #f0f4f8; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.6; color: #222; white-space: pre-wrap; }
     .msg.user .msg-bubble { background: #006298; color: white; border-radius: 12px 12px 2px 12px; }
     .msg.agent .msg-bubble { border-radius: 12px 12px 12px 2px; }
-
-    /* File upload bubble */
-    .file-bubble { background: #e8f4fd; border: 1px solid #90caf9; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #0d47a1; display: flex; align-items: center; gap: 10px; }
-    .file-bubble .file-icon { font-size: 22px; }
-    .file-bubble .file-info strong { display: block; font-size: 13px; }
-    .file-bubble .file-info span { font-size: 11px; color: #1565c0; }
-    .file-bubble .ocr-badge { background: #4caf50; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: 8px; }
-
+    .file-bubble { border-radius: 10px; padding: 12px 14px; font-size: 13px; display: flex; align-items: flex-start; gap: 10px; max-width: 88%; align-self: flex-end; }
+    .file-bubble.medical { background: #fce4ec; border: 1px solid #f48fb1; }
+    .file-bubble.employer { background: #e3f2fd; border: 1px solid #90caf9; }
+    .file-bubble .file-icon { font-size: 24px; flex-shrink: 0; }
+    .file-bubble .file-info strong { display: block; font-size: 13px; margin-bottom: 2px; }
+    .file-bubble .file-info .file-type { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
+    .file-bubble.medical .file-type { background: #e91e63; color: white; }
+    .file-bubble.employer .file-type { background: #1976d2; color: white; }
+    .file-bubble .ocr-data { font-size: 11px; line-height: 1.5; margin-top: 4px; }
+    .file-bubble.medical .ocr-data { color: #880e4f; }
+    .file-bubble.employer .ocr-data { color: #0d47a1; }
+    .ocr-badge { background: #4caf50; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: 6px; }
     .typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; background: #f0f4f8; border-radius: 12px 12px 12px 2px; }
     .typing span { width: 7px; height: 7px; border-radius: 50%; background: #aaa; animation: bounce 1.2s infinite; }
     .typing span:nth-child(2) { animation-delay: 0.2s; }
     .typing span:nth-child(3) { animation-delay: 0.4s; }
     @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
-
-    /* INPUT AREA */
     .chat-input-area { padding: 10px 14px; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center; }
     .chat-input-area input[type="text"] { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 24px; font-size: 14px; outline: none; background: #f9f9f9; }
     .chat-input-area input[type="text"]:focus { border-color: #006298; background: white; }
@@ -76,12 +72,9 @@
     .send-btn { background: #006298; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer; flex-shrink: 0; }
     .send-btn:disabled { background: #aaa; cursor: not-allowed; }
     #file-input { display: none; }
-
-    /* COMPLETE */
     .complete-banner { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 10px; padding: 24px; text-align: center; }
     .complete-banner h3 { color: #1b5e20; font-size: 18px; margin-bottom: 8px; }
     .complete-banner p { font-size: 14px; color: #2e7d32; }
-
     .hidden { display: none !important; }
   </style>
 </head>
@@ -121,7 +114,7 @@
       <div style="font-size:22px">✓</div>
       <div>
         <strong id="customer-name">–</strong>
-        <span id="customer-details">Information retrieved from system</span>
+        <span>Information retrieved from system</span>
       </div>
     </div>
 
@@ -134,7 +127,7 @@
       <div class="chat-messages" id="chat-messages"></div>
       <div class="chat-input-area">
         <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileUpload(event)" />
-        <button class="upload-btn" onclick="document.getElementById('file-input').click()" title="Upload document">📎</button>
+        <button class="upload-btn" onclick="document.getElementById('file-input').click()" title="Upload document (PDF, JPG, PNG)">📎</button>
         <input type="text" id="chat-input" placeholder="Write your answer here..." onkeydown="handleKey(event)" />
         <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
       </div>
@@ -195,41 +188,92 @@
     return null;
   }
 
+  function detectDocumentType(filename) {
+    const name = filename.toLowerCase();
+    if (name.includes('medical') || name.includes('med_') || name.includes('doctor') || name.includes('certificate') && name.includes('med')) {
+      return 'medical';
+    }
+    if (name.includes('employer') || name.includes('emp_') || name.includes('volvo') || name.includes('salary') || name.includes('payslip')) {
+      return 'employer';
+    }
+    // Default based on position - first upload = medical, second = employer
+    return uploadCount % 2 === 0 ? 'medical' : 'employer';
+  }
+
+  let uploadCount = 0;
+
   async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     event.target.value = '';
 
-    // Show file upload bubble
+    const docType = detectDocumentType(file.name);
+    uploadCount++;
+
     const c = document.getElementById('chat-messages');
     const msgEl = document.createElement('div');
-    msgEl.className = 'msg user';
-    
-    // Simulate OCR extraction based on filename
-    const ismedical = file.name.toLowerCase().includes('med') || file.name.toLowerCase().includes('cert') || file.name.toLowerCase().includes('doc');
-    const isEmployer = file.name.toLowerCase().includes('emp') || file.name.toLowerCase().includes('volvo') || file.name.toLowerCase().includes('salary');
-    
-    const docType = ismedical ? 'Medical Certificate' : isEmployer ? 'Employer Certificate' : 'Document';
-    const ocrData = ismedical 
-      ? 'Patient: Rakesh Reddy | Date: 2026-03-15 | Diagnosis: COVID-19 carrier | Recommendation: Stay home until 2026-03-25'
-      : 'Employee: Rakesh Reddy | Employer: Volvo AB | Org: 5560140440 | Period: 2026-03-15 to 2026-03-25 | Income: 42,000 SEK/month';
+    msgEl.className = 'file-bubble ' + docType;
+
+    let ocrData, ocrMessage, docLabel;
+
+    if (docType === 'medical') {
+      docLabel = 'Medical Certificate';
+      ocrData = [
+        '👤 Patient: Rakesh Reddy Karri',
+        '🪪 Personal ID: 19700101-1234',
+        '🦠 Diagnosis: COVID-19 (SARS-CoV-2) – Confirmed Carrier',
+        '📅 Certificate Date: 2026-03-15',
+        '📅 Absence Period: 2026-03-15 to 2026-03-25',
+        '👩‍⚕️ Physician: Dr. Anna Bergström, Karolinska Hospital',
+        '✅ Period Coverage: FULL – Matches claimed absence'
+      ].join('\n');
+      ocrMessage = `I have uploaded my Medical Certificate. OCR extracted the following data:
+- Patient Name: Rakesh Reddy Karri
+- Personal ID: 19700101-1234
+- Diagnosis: COVID-19 (SARS-CoV-2) Confirmed Carrier
+- Certificate Date: 2026-03-15
+- Absence Period Covered: 2026-03-15 to 2026-03-25
+- Physician: Dr. Anna Bergström, Karolinska Hospital
+- Certificate fully covers the claimed absence period: YES
+File: ${file.name}`;
+    } else {
+      docLabel = 'Employer Certificate';
+      ocrData = [
+        '👤 Employee: Rakesh Reddy Karri',
+        '🪪 Personal ID: 19700101-1234',
+        '🏢 Employer: Volvo AB',
+        '🔢 Org Number: 556014-0440',
+        '💼 Employment: Permanent Full-Time',
+        '💰 Monthly Salary: SEK 42,000',
+        '📅 Absence Period: 2026-03-15 to 2026-03-25',
+        '📞 HR Contact: hr@volvo.se',
+        '✅ Employer confirms: Employee was instructed not to work'
+      ].join('\n');
+      ocrMessage = `I have uploaded my Employer Certificate. OCR extracted the following data:
+- Employee Name: Rakesh Reddy Karri
+- Personal ID: 19700101-1234
+- Employer: Volvo AB
+- Organization Number: 556014-0440
+- Employment Type: Permanent Full-Time
+- Monthly Salary: SEK 42,000
+- Absence Period: 2026-03-15 to 2026-03-25
+- HR Contact: hr@volvo.se
+- Employer confirms employee was instructed to stay home: YES
+File: ${file.name}`;
+    }
 
     msgEl.innerHTML = `
-      <div class="msg-avatar">You</div>
-      <div class="file-bubble">
-        <div class="file-icon">📄</div>
-        <div class="file-info">
-          <strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong>
-          <span>${docType} • ${(file.size/1024).toFixed(0)} KB</span>
-          <span style="display:block;margin-top:4px;font-size:11px;color:#1565c0">${ocrData}</span>
-        </div>
+      <div class="file-icon">${docType === 'medical' ? '🏥' : '🏢'}</div>
+      <div class="file-info">
+        <strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong>
+        <div class="file-type">${docLabel}</div>
+        <div class="ocr-data">${ocrData}</div>
       </div>`;
     c.appendChild(msgEl);
     c.scrollTop = c.scrollHeight;
 
-    // Send to agent
-    const message = `I have uploaded my ${docType}. OCR extracted: ${ocrData}. File: ${file.name}`;
-    await sendToAgent(message);
+    setStep(3);
+    await sendToAgent(ocrMessage);
   }
 
   async function sendMessage() {
@@ -258,9 +302,9 @@
         document.getElementById('send-btn').disabled = true;
       } else {
         const r = (res.reply || '').toLowerCase();
-        if (r.includes('document') || r.includes('certificate') || r.includes('upload')) setStep(3);
-        else if (r.includes('review') || r.includes('caseworker') || r.includes('summary')) setStep(4);
-        else setStep(2);
+        if (r.includes('sending it to a caseworker') || r.includes('complete')) setStep(4);
+        else if (r.includes('upload') || r.includes('document') || r.includes('certificate') || r.includes('paperclip')) setStep(3);
+        else if (r.includes('step 2') || r.includes('employment') || r.includes('income')) setStep(2);
       }
     } catch(e) {
       hideTyping();
