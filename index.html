@@ -273,7 +273,7 @@
   }
 
   async function callWebhook(message) {
-    const trimmedHistory = chatHistory.slice(-6);
+    const trimmedHistory = chatHistory.slice(-4);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
