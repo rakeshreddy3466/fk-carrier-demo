@@ -194,11 +194,11 @@
     el.className = 'file-bubble ' + docType;
     let ocrLines, msg;
     if (docType === 'medical') {
-      ocrLines = ['👤 Patient: Rakesh Reddy Karri (19700101-1234)','🦠 Diagnosis: COVID-19 Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Fully covers absence period'];
-      msg = 'Medical certificate uploaded. OCR: Patient Rakesh Reddy Karri ID 19700101-1234 Diagnosis COVID-19 carrier Period 2026-03-15 to 2026-03-25 Doctor Dr Anna Bergstrom Karolinska.';
+      ocrLines = ['👤 Patient: Anna Lindqvist (19700101-1234)','🦠 Diagnosis: COVID-19 Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Fully covers absence period'];
+      msg = 'Medical certificate uploaded. OCR: Patient Anna Lindqvist ID 19700101-1234 Diagnosis COVID-19 carrier Period 2026-03-15 to 2026-03-25 Doctor Dr Anna Bergstrom Karolinska.';
     } else {
-      ocrLines = ['👤 Employee: Rakesh Reddy Karri (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Senior Engineer Permanent','💰 SEK 42000 per month','📅 Since 2015-03-01'];
-      msg = 'Employer certificate uploaded. OCR: Employee Rakesh Reddy Karri ID 19700101-1234 Employer Volvo AB Org 556014-0440 Role Senior Engineer Permanent Salary 42000 SEK Since 2015-03-01.';
+      ocrLines = ['👤 Employee: Anna Lindqvist (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Senior Engineer Permanent','💰 SEK 42000 per month','📅 Since 2015-03-01'];
+      msg = 'Employer certificate uploaded. OCR: Employee Anna Lindqvist ID 19700101-1234 Employer Volvo AB Org 556014-0440 Role Senior Engineer Permanent Salary 42000 SEK Since 2015-03-01.';
     }
     el.innerHTML = `<div class="file-icon">${docType==='medical'?'🏥':'🏢'}</div><div class="file-info"><strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong><div class="file-type">${docType==='medical'?'Medical Certificate':'Employer Certificate'}</div><div class="ocr-data">${ocrLines.join('<br>')}</div></div>`;
     c.appendChild(el);
