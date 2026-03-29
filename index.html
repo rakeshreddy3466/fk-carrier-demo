@@ -279,10 +279,8 @@
     throw new Error('Cannot parse: ' + text.substring(0, 150));
   }
 
-  async function callWebhook(message, attempt) {
-    attempt = attempt || 1;
-    // Send last 4 messages for context — enough to remember docs uploaded
-    const historyToSend = chatHistory.slice(-4);
+  async function callWebhook(message) {
+    const historyToSend = chatHistory.slice(-6);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -291,13 +289,7 @@
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const raw = (await response.text()).trim();
     console.log('n8n raw response:', JSON.stringify(raw.substring(0, 200)));
-    if (!raw || raw === '{}' || raw === '') {
-      if (attempt < 3) {
-        await new Promise(r => setTimeout(r, 3000));
-        return callWebhook(message, attempt + 1);
-      }
-      throw new Error('Empty response after 3 attempts');
-    }
+    if (!raw || raw === '{}' || raw === '') throw new Error('Empty response from n8n');
     return parseResponse(raw);
   }
 
