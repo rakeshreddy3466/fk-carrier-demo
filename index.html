@@ -195,10 +195,10 @@
     let ocrLines, msg;
     if (docType === 'medical') {
       ocrLines = ['👤 Patient: Anna Lindqvist (19700101-1234)','🦠 Diagnosis: COVID-19 Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Fully covers absence period'];
-      msg = 'Medical certificate uploaded. OCR: Patient Anna Lindqvist ID 19700101-1234 Diagnosis COVID-19 carrier Period 2026-03-15 to 2026-03-25 Doctor Dr Anna Bergstrom Karolinska.';
+      msg = 'Medical certificate uploaded. Patient: Anna Lindqvist, ID: 19700101-1234, COVID-19 carrier, period 2026-03-15 to 2026-03-25, Dr Bergstrom Karolinska.';
     } else {
       ocrLines = ['👤 Employee: Anna Lindqvist (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Senior Engineer Permanent','💰 SEK 42000 per month','📅 Since 2015-03-01'];
-      msg = 'Employer certificate uploaded. OCR: Employee Anna Lindqvist ID 19700101-1234 Employer Volvo AB Org 556014-0440 Role Senior Engineer Permanent Salary 42000 SEK Since 2015-03-01.';
+      msg = 'Employer certificate uploaded. Employee: Anna Lindqvist, ID: 19700101-1234, Volvo AB, org 556014-0440, Senior Engineer, permanent, 42000 SEK, since 2015-03-01.';
     }
     el.innerHTML = `<div class="file-icon">${docType==='medical'?'🏥':'🏢'}</div><div class="file-info"><strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong><div class="file-type">${docType==='medical'?'Medical Certificate':'Employer Certificate'}</div><div class="ocr-data">${ocrLines.join('<br>')}</div></div>`;
     c.appendChild(el);
@@ -277,7 +277,7 @@
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ personnummer, message, chatHistory: chatHistory.slice(-4), sessionId, step: 'chat' })
+      body: JSON.stringify({ personnummer, message, chatHistory: chatHistory.slice(-2), sessionId, step: 'chat' })
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const text = (await response.text()).trim();
