@@ -247,22 +247,29 @@
   }
 
   function parseResponse(text) {
-    if (!text || text.trim() === '') throw new Error('Empty response');
+    if (!text || text.trim() === '' || text.trim() === '{}') throw new Error('Empty response');
+    // Strip leading = if present
     if (text.startsWith('=')) text = text.substring(1);
     text = text.trim();
-    // Direct parse
-    try { return JSON.parse(text); } catch(e) {}
-    // Array format from allIncomingItems - [{json:{...}}]
+    // Direct JSON parse
+    try { const p = JSON.parse(text); if (p && (p.reply || p.isComplete !== undefined)) return p; } catch(e) {}
+    // Array format [{json:{...}}]
     if (text.startsWith('[')) {
       try {
         const a = JSON.parse(text);
-        if (a.length > 0) return a[0].json || a[0];
+        if (Array.isArray(a) && a.length > 0) {
+          const item = a[0].json || a[0];
+          if (item && item.reply) return item;
+        }
       } catch(e) {}
     }
-    // Find JSON object
-    const s = text.indexOf('{'), e2 = text.lastIndexOf('}');
-    if (s >= 0 && e2 > s) { try { return JSON.parse(text.substring(s, e2+1)); } catch(e) {} }
-    throw new Error('Cannot parse: ' + text.substring(0, 100));
+    // Find outermost JSON object
+    let depth = 0, start = -1;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '{') { if (depth === 0) start = i; depth++; }
+      else if (text[i] === '}') { depth--; if (depth === 0 && start >= 0) { try { const p = JSON.parse(text.substring(start, i+1)); if (p.reply) return p; } catch(e) {} } }
+    }
+    throw new Error('Cannot parse response: ' + text.substring(0, 200));
   }
 
   async function callWebhook(message, attempt) {
@@ -274,7 +281,8 @@
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const text = (await response.text()).trim();
-    if (!text || text === '{}') {
+    console.log('n8n raw response:', JSON.stringify(text.substring(0, 300)));
+    if (!text || text === '{}' || text === '') {
       if (attempt < 3) { await new Promise(r => setTimeout(r, 2000)); return callWebhook(message, attempt+1); }
       throw new Error('Empty response');
     }
