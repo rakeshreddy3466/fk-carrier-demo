@@ -132,7 +132,8 @@
 </div>
 <script>
   const WEBHOOK_URL = 'https://demoprototype.app.n8n.cloud/webhook/fk-carrier-chat';
-  let chatHistory = [], sessionId = '', personnummer = '', isWaiting = false, uploadCount = 0;
+  let chatHistory = [], sessionId = '', personnummer = '', isWaiting = false;
+  let medicalUploaded = false, employerUploaded = false;
 
   function setStep(n) {
     for (let i = 1; i <= 5; i++) {
@@ -153,7 +154,7 @@
       document.getElementById('login-screen').classList.add('hidden');
       if (res.customerFound) {
         document.getElementById('customer-banner').classList.remove('hidden');
-        document.getElementById('customer-name').textContent = extractName(res.chatHistory || []) || personnummer;
+        document.getElementById('customer-name').textContent = res.customerName || personnummer;
       }
       document.getElementById('chat-card').classList.remove('hidden');
       chatHistory = res.chatHistory || [];
@@ -162,43 +163,39 @@
     } catch(e) {
       btn.disabled = false;
       btn.textContent = 'Log in';
-      alert('Error: ' + e.message);
+      alert('Error connecting. Please try again.');
+      console.error(e);
     }
-  }
-
-  function extractName(history) {
-    const names = ['Anna Lindqvist','Erik Johansson','Sara Nilsson','Lars Bergström','Maria Svensson'];
-    for (const msg of history) {
-      for (const n of names) {
-        if (msg.content && msg.content.includes(n.split(' ')[0])) return n;
-      }
-    }
-    return null;
   }
 
   function getDocType(filename) {
     const f = filename.toLowerCase();
-    if (f.includes('medical') || f.includes('doctor') || f.includes('med_')) return 'medical';
-    if (f.includes('employer') || f.includes('emp_') || f.includes('volvo') || f.includes('payslip')) return 'employer';
-    return uploadCount % 2 === 0 ? 'medical' : 'employer';
+    if (f.includes('medical') || f.includes('doctor') || f.includes('lak') || f.includes('med')) return 'medical';
+    if (f.includes('employer') || f.includes('volvo') || f.includes('arb') || f.includes('emp')) return 'employer';
+    // Alternate based on what's already uploaded
+    if (!medicalUploaded) return 'medical';
+    if (!employerUploaded) return 'employer';
+    return 'medical';
   }
 
   async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     event.target.value = '';
-    uploadCount++;
     const docType = getDocType(file.name);
+    if (docType === 'medical') medicalUploaded = true;
+    else employerUploaded = true;
+
     const c = document.getElementById('chat-messages');
     const el = document.createElement('div');
     el.className = 'file-bubble ' + docType;
     let ocrLines, msg;
     if (docType === 'medical') {
       ocrLines = ['👤 Patient: Anna Lindqvist (19700101-1234)','🦠 Diagnosis: COVID-19 Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Fully covers absence period'];
-      msg = 'Medical certificate uploaded. Patient: Anna Lindqvist, ID: 19700101-1234, COVID-19 carrier, period 2026-03-15 to 2026-03-25, Dr Bergstrom Karolinska.';
+      msg = 'MEDICAL_CERT_UPLOADED: Patient Anna Lindqvist 19700101-1234. COVID-19 carrier. Period 2026-03-15 to 2026-03-25. Doctor: Dr Anna Bergstrom, Karolinska Hospital. Recommends not working during this period.';
     } else {
       ocrLines = ['👤 Employee: Anna Lindqvist (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Senior Engineer Permanent','💰 SEK 42000 per month','📅 Since 2015-03-01'];
-      msg = 'Employer certificate uploaded. Employee: Anna Lindqvist, ID: 19700101-1234, Volvo AB, org 556014-0440, Senior Engineer, permanent, 42000 SEK, since 2015-03-01.';
+      msg = 'EMPLOYER_CERT_UPLOADED: Employee Anna Lindqvist 19700101-1234. Employer Volvo AB org 556014-0440. Senior Engineer. Permanent. 42000 SEK/month. Employed since 2015-03-01.';
     }
     el.innerHTML = `<div class="file-icon">${docType==='medical'?'🏥':'🏢'}</div><div class="file-info"><strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong><div class="file-type">${docType==='medical'?'Medical Certificate':'Employer Certificate'}</div><div class="ocr-data">${ocrLines.join('<br>')}</div></div>`;
     c.appendChild(el);
@@ -240,20 +237,22 @@
     } catch(e) {
       hideTyping();
       appendMessage('agent', 'Something went wrong. Please try again.');
-      console.error(e);
+      console.error('sendToAgent error:', e);
     }
     isWaiting = false;
     document.getElementById('send-btn').disabled = false;
   }
 
   function parseResponse(text) {
-    if (!text || text.trim() === '' || text.trim() === '{}') throw new Error('Empty response');
-    // Strip leading = if present
+    if (!text || text.trim() === '' || text.trim() === '{}') throw new Error('Empty response from n8n');
     if (text.startsWith('=')) text = text.substring(1);
     text = text.trim();
-    // Direct JSON parse
-    try { const p = JSON.parse(text); if (p && (p.reply || p.isComplete !== undefined)) return p; } catch(e) {}
-    // Array format [{json:{...}}]
+    try {
+      const p = JSON.parse(text);
+      if (p && p.reply) return p;
+      // Handle firstIncomingItem format: {json: {...}}
+      if (p && p.json && p.json.reply) return p.json;
+    } catch(e) {}
     if (text.startsWith('[')) {
       try {
         const a = JSON.parse(text);
@@ -263,30 +262,43 @@
         }
       } catch(e) {}
     }
-    // Find outermost JSON object
+    // Find JSON object with reply field
     let depth = 0, start = -1;
     for (let i = 0; i < text.length; i++) {
       if (text[i] === '{') { if (depth === 0) start = i; depth++; }
-      else if (text[i] === '}') { depth--; if (depth === 0 && start >= 0) { try { const p = JSON.parse(text.substring(start, i+1)); if (p.reply) return p; } catch(e) {} } }
+      else if (text[i] === '}') {
+        depth--;
+        if (depth === 0 && start >= 0) {
+          try {
+            const p = JSON.parse(text.substring(start, i+1));
+            if (p && p.reply) return p;
+          } catch(e) {}
+        }
+      }
     }
-    throw new Error('Cannot parse response: ' + text.substring(0, 200));
+    throw new Error('Cannot parse: ' + text.substring(0, 150));
   }
 
   async function callWebhook(message, attempt) {
     attempt = attempt || 1;
+    // Send last 4 messages for context — enough to remember docs uploaded
+    const historyToSend = chatHistory.slice(-4);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ personnummer, message, chatHistory: chatHistory.slice(-2), sessionId, step: 'chat' })
+      body: JSON.stringify({ personnummer, message, chatHistory: historyToSend, sessionId })
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
-    const text = (await response.text()).trim();
-    console.log('n8n raw response:', JSON.stringify(text.substring(0, 300)));
-    if (!text || text === '{}' || text === '') {
-      if (attempt < 3) { await new Promise(r => setTimeout(r, 2000)); return callWebhook(message, attempt+1); }
-      throw new Error('Empty response');
+    const raw = (await response.text()).trim();
+    console.log('n8n raw response:', JSON.stringify(raw.substring(0, 200)));
+    if (!raw || raw === '{}' || raw === '') {
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 3000));
+        return callWebhook(message, attempt + 1);
+      }
+      throw new Error('Empty response after 3 attempts');
     }
-    return parseResponse(text);
+    return parseResponse(raw);
   }
 
   function appendMessage(role, text) {
