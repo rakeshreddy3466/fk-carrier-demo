@@ -192,10 +192,12 @@
     let ocrLines, msg;
     if (docType === 'medical') {
       ocrLines = ['👤 Patient: Anna Lindqvist (19700101-1234)','🦠 Diagnosis: COVID-19 Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Fully covers absence period'];
-      msg = 'MEDICAL_CERT_UPLOADED: Patient Anna Lindqvist 19700101-1234. COVID-19 carrier. Period 2026-03-15 to 2026-03-25. Doctor: Dr Anna Bergstrom, Karolinska Hospital. Recommends not working during this period.';
+      const empAlreadyDone = employerUploaded ? ' EMPLOYER_CERT_ALREADY_UPLOADED.' : '';
+      msg = 'MEDICAL_CERT_UPLOADED: Patient Anna Lindqvist 19700101-1234. COVID-19 carrier. Period 2026-03-15 to 2026-03-25. Doctor: Dr Anna Bergstrom, Karolinska Hospital. Recommends not working during this period.' + empAlreadyDone;
     } else {
       ocrLines = ['👤 Employee: Anna Lindqvist (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Senior Engineer Permanent','💰 SEK 42000 per month','📅 Since 2015-03-01'];
-      msg = 'EMPLOYER_CERT_UPLOADED: Employee Anna Lindqvist 19700101-1234. Employer Volvo AB org 556014-0440. Senior Engineer. Permanent. 42000 SEK/month. Employed since 2015-03-01.';
+      const medAlreadyDone = medicalUploaded ? ' MEDICAL_CERT_ALREADY_UPLOADED.' : '';
+      msg = 'EMPLOYER_CERT_UPLOADED: Employee Anna Lindqvist 19700101-1234. Employer Volvo AB org 556014-0440. Senior Engineer. Permanent. 42000 SEK/month. Employed since 2015-03-01.' + medAlreadyDone;
     }
     el.innerHTML = `<div class="file-icon">${docType==='medical'?'🏥':'🏢'}</div><div class="file-info"><strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong><div class="file-type">${docType==='medical'?'Medical Certificate':'Employer Certificate'}</div><div class="ocr-data">${ocrLines.join('<br>')}</div></div>`;
     c.appendChild(el);
@@ -249,9 +251,14 @@
     text = text.trim();
     try {
       const p = JSON.parse(text);
+      // Normal reply object
       if (p && p.reply) return p;
-      // Handle firstIncomingItem format: {json: {...}}
+      // firstIncomingItem wraps in {json:{...}}
       if (p && p.json && p.json.reply) return p.json;
+      // Respond Complete sends Supabase row - construct a complete response
+      if (p && p.status === 'pending_review') {
+        return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: p.personnummer || '' };
+      }
     } catch(e) {}
     if (text.startsWith('[')) {
       try {
@@ -259,10 +266,13 @@
         if (Array.isArray(a) && a.length > 0) {
           const item = a[0].json || a[0];
           if (item && item.reply) return item;
+          if (item && item.status === 'pending_review') {
+            return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: item.personnummer || '' };
+          }
         }
       } catch(e) {}
     }
-    // Find JSON object with reply field
+    // Find any JSON object
     let depth = 0, start = -1;
     for (let i = 0; i < text.length; i++) {
       if (text[i] === '{') { if (depth === 0) start = i; depth++; }
@@ -272,14 +282,17 @@
           try {
             const p = JSON.parse(text.substring(start, i+1));
             if (p && p.reply) return p;
+            if (p && p.status === 'pending_review') {
+              return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: p.personnummer || '' };
+            }
           } catch(e) {}
         }
       }
     }
-    throw new Error('Cannot parse: ' + text.substring(0, 150));
+    throw new Error('Cannot parse: ' + text.substring(0, 100));
   }
 
-  async function callWebhook(message) {
+    async function callWebhook(message) {
     const historyToSend = chatHistory.slice(-4);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
