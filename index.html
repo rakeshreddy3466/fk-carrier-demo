@@ -230,6 +230,16 @@
         document.getElementById('complete-banner').classList.remove('hidden');
         document.getElementById('chat-input').disabled = true;
         document.getElementById('send-btn').disabled = true;
+        // Save full chat history to Supabase
+        try {
+          const SURL = 'https://kmgyuwmixsdxtpxorrzc.supabase.co';
+          const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZ3l1d21peHNkeHRweG9ycnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODkzNjQsImV4cCI6MjA5MDI2NTM2NH0.y9D9WTdSHnfRZ4MdJU8Lw0Wvgr5je1NH7Kr5Es9558Q';
+          await fetch(SURL + '/rest/v1/applications?personnummer=eq.' + personnummer + '&order=created_at.desc&limit=1', {
+            method: 'PATCH',
+            headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+            body: JSON.stringify({ chat_log: chatHistory })
+          });
+        } catch(e) { console.log('Chat save error:', e); }
       } else {
         const r = (res.reply || '').toLowerCase();
         if (r.includes('sending it to a caseworker') || r.includes('application is complete')) setStep(4);
