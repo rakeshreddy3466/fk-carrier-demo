@@ -251,6 +251,11 @@
 
       
       <div class="card">
+        <div class="card-title">Uploaded Documents</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${medHtml}${empHtml}</div>
+      </div>
+
+      <div class="card">
         <div class="card-title">Conversation with AI Agent</div>
         <div class="chat-log">${chatHtml}</div>
       </div>
@@ -258,6 +263,11 @@
       <div class="card">
         <div class="card-title">AI Agent Assessment</div>
         <div class="assessment-box ${isComplete ? 'complete' : ''}">${esc(app.agent_assessment || 'No assessment recorded.')}</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Uploaded Documents</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${medHtml}${empHtml}</div>
       </div>
 
       <div class="card">
