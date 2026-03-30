@@ -132,6 +132,8 @@
 </div>
 <script>
   const WEBHOOK_URL = 'https://demoprototype.app.n8n.cloud/webhook/fk-carrier-chat';
+  const SUPABASE_URL = 'https://kmgyuwmixsdxtpxorrzc.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZ3l1d21peHNkeHRweG9ycnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODkzNjQsImV4cCI6MjA5MDI2NTM2NH0.y9D9WTdSHnfRZ4MdJU8Lw0Wvgr5je1NH7Kr5Es9558Q';
   let chatHistory = [], sessionId = '', personnummer = '', isWaiting = false;
   let medicalUploaded = false, employerUploaded = false;
 
@@ -139,6 +141,29 @@
     for (let i = 1; i <= 5; i++) {
       document.getElementById('step'+i).className = 'step'+(i<n?' done':i===n?' active':'');
     }
+  }
+
+  async function sb(path, opts = {}) {
+    return fetch(SUPABASE_URL + '/rest/v1/' + path, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation', ...(opts.headers||{}) },
+      ...opts
+    });
+  }
+
+  async function uploadDocToSupabase(file, docType) {
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      await sb('documents', {
+        method: 'POST',
+        body: JSON.stringify({ personnummer, doc_type: docType, filename: file.name, file_data: base64, mime_type: file.type || 'application/pdf' })
+      });
+      console.log('Document saved:', docType);
+    } catch(e) { console.error('Doc save error:', e); }
   }
 
   async function startSession() {
@@ -172,7 +197,6 @@
     const f = filename.toLowerCase();
     if (f.includes('medical') || f.includes('doctor') || f.includes('lak') || f.includes('med')) return 'medical';
     if (f.includes('employer') || f.includes('volvo') || f.includes('arb') || f.includes('emp')) return 'employer';
-    // Alternate based on what's already uploaded
     if (!medicalUploaded) return 'medical';
     if (!employerUploaded) return 'employer';
     return 'medical';
@@ -185,19 +209,17 @@
     const docType = getDocType(file.name);
     if (docType === 'medical') medicalUploaded = true;
     else employerUploaded = true;
-
+    uploadDocToSupabase(file, docType);
     const c = document.getElementById('chat-messages');
     const el = document.createElement('div');
     el.className = 'file-bubble ' + docType;
     let ocrLines, msg;
     if (docType === 'medical') {
       ocrLines = ['👤 Patient: Anna Lindqvist (19700101-1234)','🦠 Diagnosis: COVID-19 Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Fully covers absence period'];
-      const empAlreadyDone = employerUploaded ? ' EMPLOYER_CERT_ALREADY_UPLOADED.' : '';
-      msg = 'MEDICAL_CERT_UPLOADED: Patient Anna Lindqvist 19700101-1234. COVID-19 carrier. Period 2026-03-15 to 2026-03-25. Doctor: Dr Anna Bergstrom, Karolinska Hospital. Recommends not working during this period.' + empAlreadyDone;
+      msg = 'MEDICAL_CERT_UPLOADED: Patient Anna Lindqvist 19700101-1234. COVID-19 carrier. Period 2026-03-15 to 2026-03-25. Doctor: Dr Anna Bergstrom, Karolinska Hospital.' + (employerUploaded ? ' EMPLOYER_CERT_ALREADY_UPLOADED.' : '');
     } else {
       ocrLines = ['👤 Employee: Anna Lindqvist (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Senior Engineer Permanent','💰 SEK 42000 per month','📅 Since 2015-03-01'];
-      const medAlreadyDone = medicalUploaded ? ' MEDICAL_CERT_ALREADY_UPLOADED.' : '';
-      msg = 'EMPLOYER_CERT_UPLOADED: Employee Anna Lindqvist 19700101-1234. Employer Volvo AB org 556014-0440. Senior Engineer. Permanent. 42000 SEK/month. Employed since 2015-03-01.' + medAlreadyDone;
+      msg = 'EMPLOYER_CERT_UPLOADED: Employee Anna Lindqvist 19700101-1234. Employer Volvo AB org 556014-0440. Senior Engineer. Permanent. 42000 SEK/month. Since 2015-03-01.' + (medicalUploaded ? ' MEDICAL_CERT_ALREADY_UPLOADED.' : '');
     }
     el.innerHTML = `<div class="file-icon">${docType==='medical'?'🏥':'🏢'}</div><div class="file-info"><strong>${file.name} <span class="ocr-badge">✓ OCR</span></strong><div class="file-type">${docType==='medical'?'Medical Certificate':'Employer Certificate'}</div><div class="ocr-data">${ocrLines.join('<br>')}</div></div>`;
     c.appendChild(el);
@@ -230,13 +252,9 @@
         document.getElementById('complete-banner').classList.remove('hidden');
         document.getElementById('chat-input').disabled = true;
         document.getElementById('send-btn').disabled = true;
-        // Save full chat history to Supabase
         try {
-          const SURL = 'https://kmgyuwmixsdxtpxorrzc.supabase.co';
-          const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZ3l1d21peHNkeHRweG9ycnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODkzNjQsImV4cCI6MjA5MDI2NTM2NH0.y9D9WTdSHnfRZ4MdJU8Lw0Wvgr5je1NH7Kr5Es9558Q';
-          await fetch(SURL + '/rest/v1/applications?personnummer=eq.' + personnummer + '&order=created_at.desc&limit=1', {
+          await sb('applications?personnummer=eq.' + personnummer + '&order=created_at.desc&limit=1', {
             method: 'PATCH',
-            headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
             body: JSON.stringify({ chat_log: chatHistory })
           });
         } catch(e) { console.log('Chat save error:', e); }
@@ -261,14 +279,9 @@
     text = text.trim();
     try {
       const p = JSON.parse(text);
-      // Normal reply object
       if (p && p.reply) return p;
-      // firstIncomingItem wraps in {json:{...}}
       if (p && p.json && p.json.reply) return p.json;
-      // Respond Complete sends Supabase row - construct a complete response
-      if (p && p.status === 'pending_review') {
-        return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: p.personnummer || '' };
-      }
+      if (p && p.status === 'pending_review') return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: p.personnummer || '' };
     } catch(e) {}
     if (text.startsWith('[')) {
       try {
@@ -276,13 +289,10 @@
         if (Array.isArray(a) && a.length > 0) {
           const item = a[0].json || a[0];
           if (item && item.reply) return item;
-          if (item && item.status === 'pending_review') {
-            return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: item.personnummer || '' };
-          }
+          if (item && item.status === 'pending_review') return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: item.personnummer || '' };
         }
       } catch(e) {}
     }
-    // Find any JSON object
     let depth = 0, start = -1;
     for (let i = 0; i < text.length; i++) {
       if (text[i] === '{') { if (depth === 0) start = i; depth++; }
@@ -292,9 +302,7 @@
           try {
             const p = JSON.parse(text.substring(start, i+1));
             if (p && p.reply) return p;
-            if (p && p.status === 'pending_review') {
-              return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: p.personnummer || '' };
-            }
+            if (p && p.status === 'pending_review') return { reply: 'Your application is complete. I am now sending it to a caseworker for review.', isComplete: true, chatHistory: [], personnummer: p.personnummer || '' };
           } catch(e) {}
         }
       }
@@ -302,12 +310,11 @@
     throw new Error('Cannot parse: ' + text.substring(0, 100));
   }
 
-    async function callWebhook(message) {
-    const historyToSend = chatHistory.slice(-4);
+  async function callWebhook(message) {
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ personnummer, message, chatHistory: historyToSend, sessionId })
+      body: JSON.stringify({ personnummer, message, chatHistory: chatHistory.slice(-4), sessionId })
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const raw = (await response.text()).trim();
