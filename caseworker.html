@@ -204,6 +204,18 @@
     }
 
     // Documents
+    // Fetch actual documents from Supabase
+    let docLinks = {};
+    try {
+      const docsResp = await fetch(SUPABASE_URL + '/rest/v1/documents?personnummer=eq.' + app.personnummer + '&select=*&order=created_at.desc', {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
+      const docs = await docsResp.json();
+      if (Array.isArray(docs)) {
+        docs.forEach(d => { if (!docLinks[d.doc_type]) docLinks[d.doc_type] = d; });
+      }
+    } catch(e) { console.error('Doc fetch error:', e); }
+
     const medHtml = medical.found ? `
       <div class="doc-card medical">
         <div class="doc-card-header"><div class="doc-icon">🏥</div><div class="doc-type">Medical Certificate</div></div>
@@ -214,6 +226,7 @@
         <div class="doc-row"><span class="doc-label">Doctor:</span><span class="doc-val">${esc(medical.doctor||'Dr. Anna Bergström')}</span></div>
         <div class="doc-row"><span class="doc-label">Hospital:</span><span class="doc-val">${esc(medical.hospital||'Karolinska Hospital')}</span></div>
         <div class="doc-status">✓ Validated – Period covers absence</div>
+        ${docLinks.medical ? `<div class="doc-actions"><button class="doc-btn" onclick="viewDoc('${app.id}','medical')">👁 View</button><button class="doc-btn" onclick="downloadDoc('${app.id}','medical')">⬇ Download</button></div>` : ''}
       </div>` : `<div class="no-doc">📄 Medical certificate not uploaded</div>`;
 
     const empHtml = employer.found ? `
@@ -227,6 +240,7 @@
         <div class="doc-row"><span class="doc-label">Salary:</span><span class="doc-val">${esc(employer.salary||'42,000 SEK/month')}</span></div>
         <div class="doc-row"><span class="doc-label">Since:</span><span class="doc-val">${esc(employer.since||'2015-03-01')}</span></div>
         <div class="doc-status">✓ Validated – Employer confirmed</div>
+        ${docLinks.employer ? `<div class="doc-actions"><button class="doc-btn" onclick="viewDoc('${app.id}','employer')">👁 View</button><button class="doc-btn" onclick="downloadDoc('${app.id}','employer')">⬇ Download</button></div>` : ''}
       </div>` : `<div class="no-doc">📄 Employer certificate not uploaded</div>`;
 
     const isComplete = (app.agent_assessment||'').toLowerCase().includes('complete');
