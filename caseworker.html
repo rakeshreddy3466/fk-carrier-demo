@@ -176,7 +176,7 @@
     return { medical, employer };
   }
 
-  function selectApp(id) {
+  async function selectApp(id) {
     selectedId = id;
     renderList();
     const app = applications.find(a => a.id === id);
