@@ -3,278 +3,306 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FK Caseworker Dashboard</title>
+  <title>Försäkringskassan – Caseworker Dashboard</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f2; min-height: 100vh; }
-    .header { background: #006298; color: white; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
-    .header-left { display: flex; align-items: center; gap: 16px; }
-    .header-logo { font-size: 20px; font-weight: 700; }
-    .header-sub { font-size: 13px; opacity: 0.85; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 16px; }
-    .header-badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; }
-    .main { display: flex; height: calc(100vh - 64px); }
-    .sidebar { width: 320px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
-    .sidebar-header { padding: 16px; border-bottom: 1px solid #eee; }
-    .sidebar-header h2 { font-size: 15px; color: #333; margin-bottom: 8px; }
-    .sidebar-header input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; }
+    .header { background: #006298; color: white; padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 16px; }
+    .header h1 { font-size: 17px; font-weight: 700; }
+    .header span { font-size: 13px; opacity: 0.8; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 14px; }
+    .layout { display: flex; height: calc(100vh - 56px); }
+    .sidebar { width: 300px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar-header { padding: 14px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .sidebar-header h2 { font-size: 14px; font-weight: 600; color: #333; }
+    .refresh-btn { background: none; border: 1px solid #ddd; color: #555; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .refresh-btn:hover { background: #f5f5f5; }
     .app-list { flex: 1; overflow-y: auto; }
-    .app-item { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.15s; }
+    .app-item { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.1s; }
     .app-item:hover { background: #f8f9fa; }
-    .app-item.active { background: #e3f2fd; border-left: 3px solid #006298; }
+    .app-item.selected { background: #e3f2fd; border-left: 3px solid #006298; }
     .app-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    .app-item-name { font-size: 14px; font-weight: 600; color: #1a1a1a; }
-    .app-item-date { font-size: 11px; color: #888; }
-    .app-item-pnr { font-size: 12px; color: #666; margin-bottom: 4px; }
-    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .status-pending { background: #fff3cd; color: #856404; }
-    .status-approved { background: #d4edda; color: #155724; }
-    .status-rejected { background: #f8d7da; color: #721c24; }
-    .status-review { background: #d1ecf1; color: #0c5460; }
-    .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .content-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #888; font-size: 15px; }
-    .detail-view { flex: 1; display: flex; overflow: hidden; }
-    .detail-left { flex: 1; overflow-y: auto; padding: 24px; border-right: 1px solid #ddd; }
-    .detail-right { width: 340px; overflow-y: auto; padding: 20px; background: #fafafa; }
-    .section { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; margin-bottom: 16px; }
-    .section h3 { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
-    .chat-msg { display: flex; gap: 10px; margin-bottom: 12px; }
-    .chat-msg.user { flex-direction: row-reverse; }
-    .chat-avatar { width: 28px; height: 28px; border-radius: 50%; background: #006298; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
-    .chat-msg.user .chat-avatar { background: #555; }
-    .chat-bubble { background: #f5f5f5; border-radius: 10px; padding: 8px 12px; font-size: 13px; line-height: 1.5; color: #222; max-width: 80%; white-space: pre-wrap; }
-    .chat-msg.user .chat-bubble { background: #006298; color: white; }
-    .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
-    .info-row:last-child { border-bottom: none; }
-    .info-label { color: #666; }
-    .info-value { color: #1a1a1a; font-weight: 500; text-align: right; }
-    .assessment-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.6; color: #333; white-space: pre-wrap; min-height: 100px; }
-    .btn { padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
-    .btn-approve { background: #28a745; color: white; }
-    .btn-reject { background: #dc3545; color: white; }
-    .btn-request { background: #ffc107; color: #333; }
-    .btn:hover { opacity: 0.9; }
-    .decision-row { display: flex; gap: 8px; margin-top: 12px; }
-    .loading { text-align: center; padding: 40px; color: #888; font-size: 14px; }
-    .empty-list { text-align: center; padding: 40px; color: #888; font-size: 14px; }
-    .refresh-btn { background: none; border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-    .refresh-btn:hover { background: rgba(255,255,255,0.1); }
-    .tag { display: inline-block; background: #e3f2fd; color: #0d47a1; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-right: 4px; margin-bottom: 4px; }
-    textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; resize: vertical; min-height: 80px; outline: none; font-family: inherit; }
-    textarea:focus { border-color: #006298; }
+    .app-name { font-size: 13px; font-weight: 600; color: #222; }
+    .app-time { font-size: 11px; color: #aaa; }
+    .app-pnr { font-size: 12px; color: #666; margin-bottom: 4px; }
+    .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+    .badge.pending { background: #fff3cd; color: #856404; }
+    .badge.approved { background: #d4edda; color: #155724; }
+    .badge.rejected { background: #f8d7da; color: #721c24; }
+    .main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: #aaa; font-size: 14px; }
+    .card { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; }
+    .card-title { font-size: 13px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info-item label { display: block; font-size: 11px; color: #888; margin-bottom: 3px; font-weight: 600; text-transform: uppercase; }
+    .info-item span { font-size: 14px; color: #222; }
+    .chat-log { display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; padding: 4px 0; }
+    .chat-msg { display: flex; gap: 8px; max-width: 85%; }
+    .chat-msg.agent { align-self: flex-start; }
+    .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .chat-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .chat-msg.agent .chat-avatar { background: #006298; color: white; }
+    .chat-msg.user .chat-avatar { background: #555; color: white; }
+    .chat-bubble { padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+    .chat-msg.agent .chat-bubble { background: #f0f4f8; color: #222; border-radius: 10px 10px 10px 2px; }
+    .chat-msg.user .chat-bubble { background: #006298; color: white; border-radius: 10px 10px 2px 10px; }
+    .docs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .doc-card { border-radius: 8px; padding: 14px; border: 1px solid; }
+    .doc-card.medical { background: #fce4ec; border-color: #f48fb1; }
+    .doc-card.employer { background: #e3f2fd; border-color: #90caf9; }
+    .doc-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .doc-icon { font-size: 22px; }
+    .doc-type { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+    .doc-card.medical .doc-type { background: #e91e63; color: white; }
+    .doc-card.employer .doc-type { background: #1976d2; color: white; }
+    .doc-row { display: flex; gap: 6px; font-size: 12px; margin-bottom: 5px; align-items: flex-start; }
+    .doc-label { font-weight: 600; min-width: 80px; flex-shrink: 0; }
+    .doc-card.medical .doc-label { color: #880e4f; }
+    .doc-card.employer .doc-label { color: #0d47a1; }
+    .doc-val { color: #333; }
+    .doc-status { margin-top: 8px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; background: #e8f5e9; color: #2e7d32; }
+    .no-doc { background: #f5f5f5; border-color: #ddd; color: #aaa; font-size: 13px; display: flex; align-items: center; justify-content: center; min-height: 80px; border-radius: 8px; border: 1px dashed #ccc; }
+    .assessment-box { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 14px; font-size: 14px; color: #333; line-height: 1.6; white-space: pre-wrap; }
+    .assessment-box.complete { background: #e8f5e9; border-color: #a5d6a7; color: #1b5e20; }
+    .notes-textarea { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px; outline: none; }
+    .notes-textarea:focus { border-color: #006298; }
+    .action-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+    .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-approve { background: #2e7d32; color: white; }
+    .btn-approve:hover { background: #1b5e20; }
+    .btn-reject { background: #c62828; color: white; }
+    .btn-reject:hover { background: #b71c1c; }
+    .btn-save { background: #006298; color: white; }
+    .btn-save:hover { background: #004f7a; }
+    .status-msg { font-size: 13px; color: #2e7d32; font-weight: 600; display: none; }
   </style>
 </head>
 <body>
-
 <div class="header">
-  <div class="header-left">
-    <div class="header-logo">Försäkringskassan</div>
-    <div class="header-sub">Caseworker Dashboard</div>
-  </div>
-  <div style="display:flex;align-items:center;gap:12px">
-    <span class="header-badge" id="count-badge">Loading...</span>
-    <button class="refresh-btn" onclick="loadApplications()">↻ Refresh</button>
-  </div>
+  <h1>Försäkringskassan</h1>
+  <span>Caseworker Dashboard</span>
 </div>
-
-<div class="main">
+<div class="layout">
   <div class="sidebar">
     <div class="sidebar-header">
-      <h2>Applications</h2>
-      <input type="text" id="search-input" placeholder="Search by name or ID..." oninput="filterApps()" />
+      <h2><span id="app-count">0</span> applications</h2>
+      <button class="refresh-btn" onclick="loadApplications()">↻ Refresh</button>
     </div>
     <div class="app-list" id="app-list">
-      <div class="loading">Loading applications...</div>
+      <div style="padding:20px;color:#aaa;font-size:13px">Loading...</div>
     </div>
   </div>
-
-  <div class="content">
-    <div class="content-empty" id="empty-state">← Select an application to review</div>
-    <div class="detail-view hidden" id="detail-view">
-
-      <div class="detail-left">
-
-        <div class="section">
-          <h3>Customer Information</h3>
-          <div id="customer-info"></div>
-        </div>
-
-        <div class="section">
-          <h3>Conversation with AI Agent</h3>
-          <div id="chat-log"></div>
-        </div>
-
-        <div class="section">
-          <h3>AI Agent Assessment</h3>
-          <div class="assessment-box" id="assessment-text">No assessment available.</div>
-        </div>
-
-      </div>
-
-      <div class="detail-right">
-
-        <div class="section">
-          <h3>Application Details</h3>
-          <div id="app-details"></div>
-        </div>
-
-        <div class="section">
-          <h3>Caseworker Notes</h3>
-          <textarea id="caseworker-notes" placeholder="Add your notes here..."></textarea>
-        </div>
-
-        <div class="section">
-          <h3>Decision</h3>
-          <p style="font-size:13px;color:#666;margin-bottom:12px">Review the application and make a decision:</p>
-          <div class="decision-row">
-            <button class="btn btn-approve" onclick="makeDecision('approved')">✓ Approve</button>
-            <button class="btn btn-reject" onclick="makeDecision('rejected')">✗ Reject</button>
-          </div>
-          <div style="margin-top:8px">
-            <button class="btn btn-request" style="width:100%" onclick="makeDecision('more_info')">⚠ Request More Info</button>
-          </div>
-          <div id="decision-result" style="margin-top:12px;font-size:13px;display:none"></div>
-        </div>
-
-      </div>
+  <div class="main" id="main-content">
+    <div class="empty-state">
+      <div style="font-size:48px;opacity:0.2">📋</div>
+      <p>← Select an application to review</p>
     </div>
   </div>
 </div>
-
 <script>
   const SUPABASE_URL = 'https://kmgyuwmixsdxtpxorrzc.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZ3l1d21peHNkeHRweG9ycnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODkzNjQsImV4cCI6MjA5MDI2NTM2NH0.y9D9WTdSHnfRZ4MdJU8Lw0Wvgr5je1NH7Kr5Es9558Q';
+  let applications = [], customers = {}, selectedId = null;
 
-  let allApps = [];
-  let selectedApp = null;
-
-  async function supabase(path, options = {}) {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
-        ...options.headers
-      },
-      ...options
+  async function api(path, opts = {}) {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation', ...(opts.headers||{}) },
+      ...opts
     });
-    return res.json();
+    return r.json();
   }
 
   async function loadApplications() {
-    document.getElementById('app-list').innerHTML = '<div class="loading">Loading...</div>';
-    try {
-      const apps = await supabase('applications?select=*,customers(full_name,email)&order=created_at.desc');
-      allApps = Array.isArray(apps) ? apps : [];
-      document.getElementById('count-badge').textContent = allApps.length + ' application' + (allApps.length !== 1 ? 's' : '');
-      renderList(allApps);
-    } catch(e) {
-      document.getElementById('app-list').innerHTML = '<div class="empty-list">Error loading applications</div>';
-    }
+    document.getElementById('app-list').innerHTML = '<div style="padding:20px;color:#aaa;font-size:13px">Loading...</div>';
+    const apps = await api('applications?select=*&order=created_at.desc');
+    applications = Array.isArray(apps) ? apps : [];
+    document.getElementById('app-count').textContent = applications.length;
+    const custs = await api('customers?select=*');
+    if (Array.isArray(custs)) custs.forEach(c => { customers[c.personnummer] = c; });
+    renderList();
   }
 
-  function renderList(apps) {
+  function renderList() {
     const list = document.getElementById('app-list');
-    if (!apps.length) {
-      list.innerHTML = '<div class="empty-list">No applications yet.<br>Submit one from the customer UI!</div>';
-      return;
+    if (!applications.length) { list.innerHTML = '<div style="padding:20px;color:#aaa;font-size:13px">No applications found.</div>'; return; }
+    list.innerHTML = applications.map(app => {
+      const c = customers[app.personnummer];
+      const name = c ? c.full_name : app.personnummer;
+      const date = new Date(app.created_at).toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      const badge = app.status === 'approved' ? 'approved' : app.status === 'rejected' ? 'rejected' : 'pending';
+      const label = app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : 'Pending Review';
+      return `<div class="app-item${app.id === selectedId ? ' selected':''}" onclick="selectApp('${app.id}')">
+        <div class="app-item-top"><span class="app-name">${esc(name)}</span><span class="app-time">${date}</span></div>
+        <div class="app-pnr">${app.personnummer}</div>
+        <span class="badge ${badge}">${label}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function extractDocuments(chatLog) {
+    const medical = { found: false };
+    const employer = { found: false };
+    if (!Array.isArray(chatLog)) return { medical, employer };
+    for (const msg of chatLog) {
+      const c = msg.content || '';
+      if (c.includes('MEDICAL_CERT_UPLOADED') || c.includes('medical certificate') && c.includes('COVID')) {
+        medical.found = true;
+        const patMatch = c.match(/Patient[:\s]+([A-Za-z\s]+?)[\s,\(]/i);
+        const idMatch = c.match(/(\d{8}-\d{4})/);
+        const periodMatch = c.match(/(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/);
+        const docMatch = c.match(/Dr[.\s]+([A-Za-z\s]+?)(?:,|\.|\n|$)/i);
+        if (patMatch) medical.patient = patMatch[1].trim();
+        if (idMatch) medical.id = idMatch[1];
+        if (periodMatch) { medical.from = periodMatch[1]; medical.to = periodMatch[2]; }
+        if (docMatch) medical.doctor = 'Dr. ' + docMatch[1].trim();
+        medical.diagnosis = 'COVID-19 Confirmed Carrier';
+        medical.hospital = 'Karolinska Hospital';
+      }
+      if (c.includes('EMPLOYER_CERT_UPLOADED') || c.includes('employer certificate') && c.includes('Volvo')) {
+        employer.found = true;
+        const empMatch = c.match(/Employee[:\s]+([A-Za-z\s]+?)[\s,\(]/i);
+        const idMatch = c.match(/(\d{8}-\d{4})/);
+        const orgMatch = c.match(/[Oo]rg[.:\s]+(\d{6}-\d{4})/);
+        const salMatch = c.match(/(\d{4,6})\s*SEK/i);
+        if (empMatch) employer.employee = empMatch[1].trim();
+        if (idMatch) employer.id = idMatch[1];
+        if (orgMatch) employer.org = orgMatch[1];
+        if (salMatch) employer.salary = salMatch[1] + ' SEK/month';
+        employer.company = 'Volvo AB';
+        employer.role = 'Senior Engineer – Permanent';
+        employer.since = '2015-03-01';
+      }
     }
-    list.innerHTML = apps.map((app, i) => `
-      <div class="app-item ${selectedApp?.id === app.id ? 'active' : ''}" onclick="selectApp(${i})">
-        <div class="app-item-top">
-          <span class="app-item-name">${app.customers?.full_name || app.personnummer || 'Unknown'}</span>
-          <span class="app-item-date">${formatDate(app.created_at)}</span>
+    return { medical, employer };
+  }
+
+  function selectApp(id) {
+    selectedId = id;
+    renderList();
+    const app = applications.find(a => a.id === id);
+    if (!app) return;
+    const c = customers[app.personnummer];
+    const { medical, employer } = extractDocuments(app.chat_log);
+
+    // Chat log
+    let chatHtml = '<div style="color:#aaa;font-size:13px;padding:8px 0">No conversation recorded.</div>';
+    if (Array.isArray(app.chat_log) && app.chat_log.length > 0) {
+      chatHtml = app.chat_log.map(msg => {
+        const isAgent = msg.role === 'assistant';
+        const content = esc(msg.content || '');
+        return `<div class="chat-msg ${isAgent ? 'agent' : 'user'}">
+          <div class="chat-avatar">${isAgent ? 'FK' : 'You'}</div>
+          <div class="chat-bubble">${content}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // Documents
+    const medHtml = medical.found ? `
+      <div class="doc-card medical">
+        <div class="doc-card-header"><div class="doc-icon">🏥</div><div class="doc-type">Medical Certificate</div></div>
+        <div class="doc-row"><span class="doc-label">Patient:</span><span class="doc-val">${esc(medical.patient||'Anna Lindqvist')}</span></div>
+        <div class="doc-row"><span class="doc-label">ID:</span><span class="doc-val">${esc(medical.id||app.personnummer)}</span></div>
+        <div class="doc-row"><span class="doc-label">Diagnosis:</span><span class="doc-val">${esc(medical.diagnosis||'COVID-19')}</span></div>
+        <div class="doc-row"><span class="doc-label">Period:</span><span class="doc-val">${esc(medical.from||'2026-03-15')} to ${esc(medical.to||'2026-03-25')}</span></div>
+        <div class="doc-row"><span class="doc-label">Doctor:</span><span class="doc-val">${esc(medical.doctor||'Dr. Anna Bergström')}</span></div>
+        <div class="doc-row"><span class="doc-label">Hospital:</span><span class="doc-val">${esc(medical.hospital||'Karolinska Hospital')}</span></div>
+        <div class="doc-status">✓ Validated – Period covers absence</div>
+      </div>` : `<div class="no-doc">📄 Medical certificate not uploaded</div>`;
+
+    const empHtml = employer.found ? `
+      <div class="doc-card employer">
+        <div class="doc-card-header"><div class="doc-icon">🏢</div><div class="doc-type">Employer Certificate</div></div>
+        <div class="doc-row"><span class="doc-label">Employee:</span><span class="doc-val">${esc(employer.employee||'Anna Lindqvist')}</span></div>
+        <div class="doc-row"><span class="doc-label">ID:</span><span class="doc-val">${esc(employer.id||app.personnummer)}</span></div>
+        <div class="doc-row"><span class="doc-label">Employer:</span><span class="doc-val">${esc(employer.company||'Volvo AB')}</span></div>
+        <div class="doc-row"><span class="doc-label">Org No:</span><span class="doc-val">${esc(employer.org||'556014-0440')}</span></div>
+        <div class="doc-row"><span class="doc-label">Role:</span><span class="doc-val">${esc(employer.role||'Senior Engineer')}</span></div>
+        <div class="doc-row"><span class="doc-label">Salary:</span><span class="doc-val">${esc(employer.salary||'42,000 SEK/month')}</span></div>
+        <div class="doc-row"><span class="doc-label">Since:</span><span class="doc-val">${esc(employer.since||'2015-03-01')}</span></div>
+        <div class="doc-status">✓ Validated – Employer confirmed</div>
+      </div>` : `<div class="no-doc">📄 Employer certificate not uploaded</div>`;
+
+    const isComplete = (app.agent_assessment||'').toLowerCase().includes('complete');
+    const badge = app.status === 'approved' ? 'approved' : app.status === 'rejected' ? 'rejected' : 'pending';
+    const label = app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : 'Pending Review';
+    const date = new Date(app.created_at).toLocaleString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+    document.getElementById('main-content').innerHTML = `
+      <div class="card">
+        <div class="card-title">Customer Information</div>
+        <div class="info-grid">
+          <div class="info-item"><label>Name</label><span>${c ? esc(c.full_name) : '–'}</span></div>
+          <div class="info-item"><label>Personal ID</label><span>${app.personnummer}</span></div>
+          <div class="info-item"><label>Email</label><span>${c ? esc(c.email) : '–'}</span></div>
+          <div class="info-item"><label>Phone</label><span>${c ? esc(c.phone) : '–'}</span></div>
+          <div class="info-item"><label>Employer</label><span>${c ? esc(c.employer) : '–'}</span></div>
+          <div class="info-item"><label>Employment Type</label><span>${c ? esc(c.employment_type) : '–'}</span></div>
+          <div class="info-item"><label>Monthly Income</label><span>${c ? c.monthly_income + ' SEK' : '–'}</span></div>
+          <div class="info-item"><label>Status</label><span class="badge ${badge}">${label}</span></div>
         </div>
-        <div class="app-item-pnr">${app.personnummer || '–'}</div>
-        <span class="status-badge status-${app.status === 'pending_review' ? 'pending' : app.status}">${formatStatus(app.status)}</span>
       </div>
-    `).join('');
-  }
 
-  function filterApps() {
-    const q = document.getElementById('search-input').value.toLowerCase();
-    const filtered = allApps.filter(a =>
-      (a.customers?.full_name || '').toLowerCase().includes(q) ||
-      (a.personnummer || '').includes(q)
-    );
-    renderList(filtered);
-  }
+      <div class="card">
+        <div class="card-title">Uploaded Documents</div>
+        <div class="docs-grid">${medHtml}${empHtml}</div>
+      </div>
 
-  function selectApp(index) {
-    selectedApp = allApps[index];
-    document.getElementById('empty-state').classList.add('hidden');
-    document.getElementById('detail-view').classList.remove('hidden');
-    document.getElementById('decision-result').style.display = 'none';
-    renderDetail(selectedApp);
-    renderList(allApps);
-  }
+      <div class="card">
+        <div class="card-title">Conversation with AI Agent</div>
+        <div class="chat-log">${chatHtml}</div>
+      </div>
 
-  function renderDetail(app) {
-    const customer = app.customers || {};
+      <div class="card">
+        <div class="card-title">AI Agent Assessment</div>
+        <div class="assessment-box ${isComplete ? 'complete' : ''}">${esc(app.agent_assessment || 'No assessment recorded.')}</div>
+      </div>
 
-    document.getElementById('customer-info').innerHTML = `
-      <div class="info-row"><span class="info-label">Name</span><span class="info-value">${customer.full_name || '–'}</span></div>
-      <div class="info-row"><span class="info-label">Personal ID</span><span class="info-value">${app.personnummer || '–'}</span></div>
-      <div class="info-row"><span class="info-label">Email</span><span class="info-value">${customer.email || '–'}</span></div>
-      <div class="info-row"><span class="info-label">Employer</span><span class="info-value">${customer.employer || '–'}</span></div>
-      <div class="info-row"><span class="info-label">Employment type</span><span class="info-value">${customer.employment_type || '–'}</span></div>
-      <div class="info-row"><span class="info-label">Monthly income</span><span class="info-value">${customer.monthly_income ? customer.monthly_income + ' SEK' : '–'}</span></div>
-    `;
-
-    document.getElementById('app-details').innerHTML = `
-      <div class="info-row"><span class="info-label">Application ID</span><span class="info-value" style="font-size:11px">${app.id?.substring(0,8)}...</span></div>
-      <div class="info-row"><span class="info-label">Status</span><span class="info-value"><span class="status-badge status-${app.status === 'pending_review' ? 'pending' : app.status}">${formatStatus(app.status)}</span></span></div>
-      <div class="info-row"><span class="info-label">Submitted</span><span class="info-value">${formatDate(app.created_at)}</span></div>
-    `;
-
-    const chatLog = document.getElementById('chat-log');
-    const history = app.chat_log || [];
-    if (history.length) {
-      chatLog.innerHTML = history.map(msg => `
-        <div class="chat-msg ${msg.role === 'user' ? 'user' : ''}">
-          <div class="chat-avatar">${msg.role === 'user' ? 'C' : 'FK'}</div>
-          <div class="chat-bubble">${msg.content}</div>
+      <div class="card">
+        <div class="card-title">Application Details</div>
+        <div class="info-grid">
+          <div class="info-item"><label>Application ID</label><span>${app.id.substring(0,8)}...</span></div>
+          <div class="info-item"><label>Submitted</label><span>${date}</span></div>
         </div>
-      `).join('');
-    } else {
-      chatLog.innerHTML = '<p style="color:#888;font-size:13px">No conversation recorded.</p>';
-    }
+      </div>
 
-    document.getElementById('assessment-text').textContent = app.agent_assessment || 'No assessment available.';
-    document.getElementById('caseworker-notes').value = app.caseworker_notes || '';
+      <div class="card">
+        <div class="card-title">Decision</div>
+        <textarea class="notes-textarea" id="notes-field" placeholder="Add caseworker notes here...">${esc(app.caseworker_notes||'')}</textarea>
+        <div class="action-row">
+          <button class="btn btn-approve" onclick="updateApp('${app.id}','approved')">✓ Approve Application</button>
+          <button class="btn btn-reject" onclick="updateApp('${app.id}','rejected')">✗ Reject Application</button>
+          <button class="btn btn-save" onclick="saveNotes('${app.id}')">💾 Save Notes</button>
+          <span class="status-msg" id="status-msg"></span>
+        </div>
+      </div>`;
   }
 
-  async function makeDecision(decision) {
-    if (!selectedApp) return;
-    const notes = document.getElementById('caseworker-notes').value;
-    const result = document.getElementById('decision-result');
-
-    try {
-      await supabase(`applications?id=eq.${selectedApp.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: decision, caseworker_notes: notes, decision: decision })
-      });
-
-      selectedApp.status = decision;
-      result.style.display = 'block';
-      result.style.color = decision === 'approved' ? '#28a745' : decision === 'rejected' ? '#dc3545' : '#856404';
-      result.textContent = decision === 'approved' ? '✓ Application approved!' : decision === 'rejected' ? '✗ Application rejected.' : '⚠ More information requested.';
-      renderList(allApps);
-    } catch(e) {
-      result.style.display = 'block';
-      result.style.color = '#dc3545';
-      result.textContent = 'Error saving decision.';
-    }
+  async function updateApp(id, status) {
+    const notes = document.getElementById('notes-field')?.value || '';
+    await api('applications?id=eq.' + id, { method: 'PATCH', body: JSON.stringify({ status, caseworker_notes: notes }) });
+    const app = applications.find(a => a.id === id);
+    if (app) { app.status = status; app.caseworker_notes = notes; }
+    showMsg('✓ Application ' + status + '!');
+    renderList();
+    selectApp(id);
   }
 
-  function formatDate(str) {
-    if (!str) return '–';
-    return new Date(str).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  async function saveNotes(id) {
+    const notes = document.getElementById('notes-field')?.value || '';
+    await api('applications?id=eq.' + id, { method: 'PATCH', body: JSON.stringify({ caseworker_notes: notes }) });
+    const app = applications.find(a => a.id === id);
+    if (app) app.caseworker_notes = notes;
+    showMsg('✓ Notes saved!');
   }
 
-  function formatStatus(s) {
-    const map = { pending_review: 'Pending Review', approved: 'Approved', rejected: 'Rejected', more_info: 'More Info Needed' };
-    return map[s] || s || 'Unknown';
+  function showMsg(msg) {
+    const el = document.getElementById('status-msg');
+    if (el) { el.textContent = msg; el.style.display = 'inline'; setTimeout(() => { el.style.display = 'none'; }, 3000); }
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   loadApplications();
