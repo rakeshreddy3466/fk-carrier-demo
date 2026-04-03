@@ -3,115 +3,422 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Försäkringskassan – Caseworker Dashboard</title>
+  <title>Framtidskassan – Caseworker Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --fk-blue:        #006298;
+      --fk-blue-dark:   #004f7c;
+      --fk-blue-light:  #e6f2f8;
+      --fk-blue-mid:    #cce3ef;
+      --fk-green:       #1a7a3c;
+      --fk-green-light: #e8f5ee;
+      --fk-orange:      #c8510a;
+      --fk-orange-light:#fdf0e6;
+      --fk-red:         #b81c1c;
+      --fk-red-light:   #fdeaea;
+      --fk-yellow:      #856404;
+      --fk-yellow-light:#fff8e1;
+      --fk-grey-100:    #f5f5f5;
+      --fk-grey-200:    #e8e8e8;
+      --fk-grey-300:    #d0d0d0;
+      --fk-grey-500:    #767676;
+      --fk-grey-700:    #3d3d3d;
+      --fk-grey-900:    #1a1a1a;
+      --fk-white:       #ffffff;
+      --fk-radius:      4px;
+      --fk-radius-lg:   8px;
+      --fk-shadow:      0 1px 3px rgba(0,0,0,0.10);
+      --fk-shadow-md:   0 2px 8px rgba(0,0,0,0.12);
+      --fk-font:        'Source Sans 3','Segoe UI',sans-serif;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f2; min-height: 100vh; }
-    .header { background: #006298; color: white; padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 16px; }
-    .header h1 { font-size: 17px; font-weight: 700; }
-    .header span { font-size: 13px; opacity: 0.8; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 14px; }
-    .layout { display: flex; height: calc(100vh - 56px); }
-    .sidebar { width: 300px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; flex-shrink: 0; }
-    .sidebar-header { padding: 14px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .sidebar-header h2 { font-size: 14px; font-weight: 600; color: #333; }
-    .refresh-btn { background: none; border: 1px solid #ddd; color: #555; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
-    .refresh-btn:hover { background: #f5f5f5; }
-    .app-list { flex: 1; overflow-y: auto; }
-    .app-item { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.1s; }
-    .app-item:hover { background: #f8f9fa; }
-    .app-item.selected { background: #e3f2fd; border-left: 3px solid #006298; }
-    .app-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    .app-name { font-size: 13px; font-weight: 600; color: #222; }
-    .app-time { font-size: 11px; color: #aaa; }
-    .app-pnr { font-size: 12px; color: #666; margin-bottom: 4px; }
-    .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
-    .badge.pending { background: #fff3cd; color: #856404; }
-    .badge.approved { background: #d4edda; color: #155724; }
-    .badge.rejected { background: #f8d7da; color: #721c24; }
-    .main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-    .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: #aaa; font-size: 14px; }
-    .card { background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; }
-    .card-title { font-size: 13px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .info-item label { display: block; font-size: 11px; color: #888; margin-bottom: 3px; font-weight: 600; text-transform: uppercase; }
-    .info-item span { font-size: 14px; color: #222; }
-    .chat-log { display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; padding: 4px 0; }
-    .chat-msg { display: flex; gap: 8px; max-width: 85%; }
-    .chat-msg.agent { align-self: flex-start; }
-    .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
-    .chat-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
-    .chat-msg.agent .chat-avatar { background: #006298; color: white; }
-    .chat-msg.user .chat-avatar { background: #555; color: white; }
-    .chat-bubble { padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
-    .chat-msg.agent .chat-bubble { background: #f0f4f8; color: #222; border-radius: 10px 10px 10px 2px; }
-    .chat-msg.user .chat-bubble { background: #006298; color: white; border-radius: 10px 10px 2px 10px; }
-    .docs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .doc-card { border-radius: 8px; padding: 14px; border: 1px solid; }
-    .doc-card.medical { background: #fce4ec; border-color: #f48fb1; }
-    .doc-card.employer { background: #e3f2fd; border-color: #90caf9; }
-    .doc-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-    .doc-icon { font-size: 22px; }
-    .doc-type { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
-    .doc-card.medical .doc-type { background: #e91e63; color: white; }
-    .doc-card.employer .doc-type { background: #1976d2; color: white; }
-    .doc-row { display: flex; gap: 6px; font-size: 12px; margin-bottom: 5px; align-items: flex-start; }
-    .doc-label { font-weight: 600; min-width: 80px; flex-shrink: 0; }
-    .doc-card.medical .doc-label { color: #880e4f; }
-    .doc-card.employer .doc-label { color: #0d47a1; }
-    .doc-val { color: #333; }
-    .doc-status { margin-top: 8px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; background: #e8f5e9; color: #2e7d32; }
-    .no-doc { background: #f5f5f5; border-color: #ddd; color: #aaa; font-size: 13px; display: flex; align-items: center; justify-content: center; min-height: 80px; border-radius: 8px; border: 1px dashed #ccc; }
-    .assessment-box { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 14px; font-size: 14px; color: #333; line-height: 1.6; white-space: pre-wrap; }
-    .assessment-box.complete { background: #e8f5e9; border-color: #a5d6a7; color: #1b5e20; }
-    .notes-textarea { width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px; outline: none; }
-    .notes-textarea:focus { border-color: #006298; }
-    .action-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
-    .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .btn-approve { background: #2e7d32; color: white; }
-    .btn-approve:hover { background: #1b5e20; }
-    .btn-reject { background: #c62828; color: white; }
-    .btn-reject:hover { background: #b71c1c; }
-    .btn-save { background: #006298; color: white; }
-    .btn-save:hover { background: #004f7a; }
-    .status-msg { font-size: 13px; color: #2e7d32; font-weight: 600; display: none; }
+    body {
+      font-family: var(--fk-font);
+      background: var(--fk-grey-100);
+      min-height: 100vh;
+      color: var(--fk-grey-900);
+      font-size: 15px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .fk-header {
+      background: var(--fk-blue);
+      color: white;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      box-shadow: var(--fk-shadow-md);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .fk-logo-mark {
+      width: 34px; height: 34px;
+      background: white; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .fk-header h1 { font-size: 16px; font-weight: 700; }
+    .fk-header-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.3); margin: 0 4px; }
+    .fk-header span { font-size: 13px; opacity: 0.8; }
+    .prototype-badge {
+      margin-left: auto;
+      background: var(--fk-orange);
+      color: white; font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────── */
+    .fk-layout { display: flex; height: calc(100vh - 56px); }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .fk-sidebar {
+      width: 288px;
+      background: var(--fk-white);
+      border-right: 1px solid var(--fk-grey-200);
+      display: flex; flex-direction: column;
+      flex-shrink: 0;
+    }
+    .fk-sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--fk-grey-200);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .fk-sidebar-header h2 { font-size: 13px; font-weight: 700; color: var(--fk-grey-700); text-transform: uppercase; letter-spacing: 0.5px; }
+    .fk-refresh-btn {
+      background: none;
+      border: 1px solid var(--fk-grey-300);
+      color: var(--fk-grey-500);
+      padding: 4px 10px;
+      border-radius: var(--fk-radius);
+      font-size: 12px; cursor: pointer;
+      font-family: var(--fk-font);
+      transition: all 0.15s;
+    }
+    .fk-refresh-btn:hover { background: var(--fk-blue-light); color: var(--fk-blue); border-color: var(--fk-blue); }
+
+    .fk-app-list { flex: 1; overflow-y: auto; }
+    .fk-app-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--fk-grey-100);
+      cursor: pointer;
+      transition: background 0.1s;
+      border-left: 3px solid transparent;
+    }
+    .fk-app-item:hover { background: var(--fk-grey-100); }
+    .fk-app-item.selected { background: var(--fk-blue-light); border-left-color: var(--fk-blue); }
+    .fk-app-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+    .fk-app-name { font-size: 13px; font-weight: 700; color: var(--fk-grey-900); }
+    .fk-app-time { font-size: 11px; color: var(--fk-grey-500); }
+    .fk-app-pnr { font-size: 12px; color: var(--fk-grey-500); margin-bottom: 5px; }
+    .fk-app-meta { display: flex; gap: 6px; align-items: center; }
+
+    .fk-badge {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      padding: 2px 9px; border-radius: 20px;
+    }
+    .fk-badge.pending  { background: var(--fk-yellow-light); color: var(--fk-yellow); border: 1px solid #f0d080; }
+    .fk-badge.approved { background: var(--fk-green-light); color: var(--fk-green); border: 1px solid #8fc5a3; }
+    .fk-badge.rejected { background: var(--fk-red-light); color: var(--fk-red); border: 1px solid #f0a0a0; }
+
+    .fk-benefit-tag {
+      font-size: 10px; font-weight: 600;
+      padding: 2px 7px; border-radius: 3px;
+      background: var(--fk-blue-light); color: var(--fk-blue);
+      border: 1px solid var(--fk-blue-mid);
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    /* ── Main content ────────────────────────────────────────── */
+    .fk-main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .fk-empty {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px; color: var(--fk-grey-500); font-size: 14px;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .fk-card {
+      background: var(--fk-white);
+      border-radius: var(--fk-radius-lg);
+      border: 1px solid var(--fk-grey-200);
+      padding: 20px 24px;
+      box-shadow: var(--fk-shadow);
+    }
+    .fk-card-title {
+      font-size: 11px; font-weight: 700;
+      color: var(--fk-grey-500);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--fk-grey-200);
+    }
+
+    /* ── Info grid ───────────────────────────────────────────── */
+    .fk-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .fk-info-item label {
+      display: block; font-size: 11px; color: var(--fk-grey-500);
+      margin-bottom: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .fk-info-item span { font-size: 14px; color: var(--fk-grey-900); font-weight: 500; }
+
+    /* ── Chat log ────────────────────────────────────────────── */
+    .fk-chat-log {
+      display: flex; flex-direction: column; gap: 10px;
+      max-height: 320px; overflow-y: auto; padding: 4px 0;
+    }
+    .fk-chat-msg { display: flex; gap: 8px; max-width: 85%; }
+    .fk-chat-msg.agent { align-self: flex-start; }
+    .fk-chat-msg.user  { align-self: flex-end; flex-direction: row-reverse; }
+    .fk-chat-avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+    }
+    .fk-chat-msg.agent .fk-chat-avatar { background: var(--fk-blue); color: white; }
+    .fk-chat-msg.user  .fk-chat-avatar { background: var(--fk-grey-500); color: white; }
+    .fk-chat-bubble {
+      padding: 8px 12px; border-radius: 10px;
+      font-size: 13px; line-height: 1.5; white-space: pre-wrap;
+    }
+    .fk-chat-msg.agent .fk-chat-bubble { background: var(--fk-grey-100); color: var(--fk-grey-900); border-radius: 2px 10px 10px 10px; border: 1px solid var(--fk-grey-200); }
+    .fk-chat-msg.user  .fk-chat-bubble { background: var(--fk-blue); color: white; border-radius: 10px 2px 10px 10px; }
+
+    /* ── Documents ───────────────────────────────────────────── */
+    .fk-docs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .fk-doc-card { border-radius: var(--fk-radius-lg); padding: 14px 16px; border: 1px solid; }
+    .fk-doc-card.medical  { background: #fdf0f5; border-color: #f0b8cc; }
+    .fk-doc-card.employer { background: var(--fk-blue-light); border-color: var(--fk-blue-mid); }
+    .fk-doc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .fk-doc-icon { font-size: 20px; }
+    .fk-doc-type { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .fk-doc-card.medical  .fk-doc-type { background: #c2185b; color: white; }
+    .fk-doc-card.employer .fk-doc-type { background: var(--fk-blue); color: white; }
+    .fk-doc-row { display: flex; gap: 6px; font-size: 12px; margin-bottom: 5px; align-items: flex-start; }
+    .fk-doc-label { font-weight: 700; min-width: 72px; flex-shrink: 0; }
+    .fk-doc-card.medical  .fk-doc-label { color: #880e4f; }
+    .fk-doc-card.employer .fk-doc-label { color: var(--fk-blue-dark); }
+    .fk-doc-val { color: var(--fk-grey-700); }
+    .fk-doc-status { margin-top: 8px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 3px; display: inline-block; background: var(--fk-green-light); color: var(--fk-green); border: 1px solid #8fc5a3; }
+    .fk-no-doc { background: var(--fk-grey-100); border: 1px dashed var(--fk-grey-300); color: var(--fk-grey-500); font-size: 13px; display: flex; align-items: center; justify-content: center; min-height: 80px; border-radius: var(--fk-radius-lg); }
+    .fk-doc-actions { margin-top: 10px; display: flex; gap: 6px; }
+    .fk-doc-btn { background: none; border: 1px solid var(--fk-grey-300); color: var(--fk-grey-700); padding: 4px 10px; border-radius: var(--fk-radius); font-size: 12px; cursor: pointer; font-family: var(--fk-font); transition: all 0.15s; }
+    .fk-doc-btn:hover { border-color: var(--fk-blue); color: var(--fk-blue); background: var(--fk-blue-light); }
+
+    /* ── Assessment box ──────────────────────────────────────── */
+    .fk-assessment {
+      background: var(--fk-grey-100);
+      border: 1px solid var(--fk-grey-200);
+      border-radius: var(--fk-radius);
+      padding: 14px 16px;
+      font-size: 14px; color: var(--fk-grey-700);
+      line-height: 1.6; white-space: pre-wrap;
+    }
+    .fk-assessment.complete {
+      background: var(--fk-green-light);
+      border-color: #8fc5a3;
+      color: #1b4d2e;
+    }
+
+    /* ── Guideline citation box ──────────────────────────────── */
+    .fk-guideline-box {
+      background: #fffbf0;
+      border: 1px solid #f0d890;
+      border-left: 4px solid #d4a017;
+      border-radius: var(--fk-radius);
+      padding: 14px 16px;
+      margin-top: 12px;
+    }
+    .fk-guideline-title {
+      font-size: 11px; font-weight: 700;
+      color: #856404; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .fk-guideline-item {
+      padding: 8px 10px;
+      border-radius: var(--fk-radius);
+      background: white;
+      border: 1px solid #f0e0a0;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--fk-grey-700);
+      line-height: 1.5;
+    }
+    .fk-guideline-item:last-child { margin-bottom: 0; }
+    .fk-guideline-ref {
+      font-size: 11px; font-weight: 700;
+      color: #856404; margin-bottom: 3px;
+    }
+    .fk-guideline-text { font-size: 12px; color: var(--fk-grey-700); }
+    .fk-guideline-link { font-size: 11px; color: var(--fk-blue); text-decoration: none; }
+    .fk-guideline-link:hover { text-decoration: underline; }
+
+    /* ── Two-column caseworker layout ────────────────────────── */
+    .fk-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* ── Decision section ────────────────────────────────────── */
+    .fk-checklist { margin-bottom: 16px; }
+    .fk-check-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--fk-grey-100);
+      font-size: 13px;
+    }
+    .fk-check-item:last-child { border-bottom: none; }
+    .fk-check-item input[type="checkbox"] {
+      width: 18px; height: 18px; flex-shrink: 0; cursor: pointer;
+      accent-color: var(--fk-blue); margin-top: 1px;
+    }
+    .fk-check-item label { cursor: pointer; color: var(--fk-grey-700); line-height: 1.4; }
+
+    .fk-notes-textarea {
+      width: 100%; border: 2px solid var(--fk-grey-200);
+      border-radius: var(--fk-radius); padding: 10px 12px;
+      font-size: 14px; font-family: var(--fk-font);
+      resize: vertical; min-height: 80px; outline: none;
+      color: var(--fk-grey-900); transition: border-color 0.15s;
+    }
+    .fk-notes-textarea:focus { border-color: var(--fk-blue); box-shadow: 0 0 0 3px rgba(0,98,152,0.12); }
+
+    .fk-action-row { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+    .fk-btn {
+      padding: 10px 20px; border: none;
+      border-radius: var(--fk-radius);
+      font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: var(--fk-font);
+      transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .fk-btn-approve { background: var(--fk-green); color: white; }
+    .fk-btn-approve:hover { background: #155c2e; }
+    .fk-btn-reject { background: var(--fk-red); color: white; }
+    .fk-btn-reject:hover { background: #8f1515; }
+    .fk-btn-save { background: var(--fk-blue); color: white; }
+    .fk-btn-save:hover { background: var(--fk-blue-dark); }
+    .fk-btn-outline {
+      background: white; color: var(--fk-blue);
+      border: 2px solid var(--fk-blue);
+    }
+    .fk-btn-outline:hover { background: var(--fk-blue-light); }
+
+    .fk-status-msg { font-size: 13px; color: var(--fk-green); font-weight: 700; display: none; }
+
+    /* ── Decision letter preview ─────────────────────────────── */
+    .fk-letter-preview {
+      background: white;
+      border: 1px solid var(--fk-grey-200);
+      border-radius: var(--fk-radius);
+      padding: 20px 24px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--fk-grey-700);
+      white-space: pre-wrap;
+      display: none;
+      margin-top: 12px;
+    }
+    .fk-letter-preview.visible { display: block; }
   </style>
 </head>
 <body>
-<div class="header">
-  <h1>Försäkringskassan</h1>
-  <span>Caseworker Dashboard</span>
-</div>
-<div class="layout">
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h2><span id="app-count">0</span> applications</h2>
-      <button class="refresh-btn" onclick="loadApplications()">↻ Refresh</button>
-    </div>
-    <div class="app-list" id="app-list">
-      <div style="padding:20px;color:#aaa;font-size:13px">Loading...</div>
-    </div>
+
+<header class="fk-header">
+  <div class="fk-logo-mark">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M12 3L4 7v10l8 4 8-4V7L12 3z" fill="#006298"/>
+      <path d="M12 7l4 2v4l-4 2-4-2V9l4-2z" fill="white"/>
+    </svg>
   </div>
-  <div class="main" id="main-content">
-    <div class="empty-state">
+  <h1>Framtidskassan</h1>
+  <div class="fk-header-sep"></div>
+  <span>Caseworker Dashboard</span>
+  <span class="prototype-badge">🎓 Student Prototype</span>
+</header>
+
+<div class="fk-layout">
+  <!-- Sidebar -->
+  <aside class="fk-sidebar">
+    <div class="fk-sidebar-header">
+      <h2><span id="app-count">0</span> Applications</h2>
+      <button class="fk-refresh-btn" onclick="loadApplications()">↻ Refresh</button>
+    </div>
+    <div class="fk-app-list" id="app-list">
+      <div style="padding:20px;color:var(--fk-grey-500);font-size:13px">Loading…</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="fk-main" id="main-content">
+    <div class="fk-empty">
       <div style="font-size:48px;opacity:0.2">📋</div>
       <p>← Select an application to review</p>
     </div>
-  </div>
+  </main>
 </div>
+
 <script>
   const SUPABASE_URL = 'https://kmgyuwmixsdxtpxorrzc.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZ3l1d21peHNkeHRweG9ycnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2ODkzNjQsImV4cCI6MjA5MDI2NTM2NH0.y9D9WTdSHnfRZ4MdJU8Lw0Wvgr5je1NH7Kr5Es9558Q';
-  let applications = [], customers = {}, selectedId = null;
+  let applications = [], customers = {}, selectedId = null, docCache = {};
+
+  // ── Guideline references by benefit type ────────────────────
+  const GUIDELINES = {
+    carrier: [
+      { ref: 'SFB 46 kap. 11 §', text: 'The insured person must be a carrier of an infectious disease or suspected carrier, and must be prohibited from working by a medical officer.', url: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialforsakringsbalk-2010110_sfs-2010-110/' },
+      { ref: 'FKFS 2012:3, §2', text: 'Compensation requires documentation from an infection control physician confirming carrier status and recommendation to refrain from work.', url: 'https://www.forsakringskassan.se/privatperson/sjuk/smittbararpenning' },
+      { ref: 'SFB 46 kap. 13 §', text: 'Income loss must be documented. The benefit replaces income lost during the period the prohibition to work applies.', url: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialforsakringsbalk-2010110_sfs-2010-110/' },
+    ],
+    sick: [
+      { ref: 'SFB 27 kap. 2 §', text: 'Sick pay requires a medical certificate from day 8, confirming inability to work due to illness or injury.', url: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialforsakringsbalk-2010110_sfs-2010-110/' },
+      { ref: 'SFB 27 kap. 46 §', text: 'The work capacity must be reduced by at least 25% due to illness. Assessment is against the applicant\'s own occupation for the first 90 days.', url: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialforsakringsbalk-2010110_sfs-2010-110/' },
+    ],
+    parental: [
+      { ref: 'SFB 12 kap. 1 §', text: 'Parental benefit is payable for a total of 480 days per child. At least 90 days are reserved for each parent.', url: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialforsakringsbalk-2010110_sfs-2010-110/' },
+      { ref: 'SFB 12 kap. 33 §', text: 'To receive income-based parental benefit, the parent must have been insured for at least 240 days before the expected date of childbirth.', url: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialforsakringsbalk-2010110_sfs-2010-110/' },
+    ],
+    disability: [
+      { ref: 'SFB 33 kap. 2 §', text: 'Activity compensation is granted to persons aged 19–29 whose work capacity is reduced by at least 25% for at least one year.', url: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialforsakringsbalk-2010110_sfs-2010-110/' },
+    ],
+    default: [
+      { ref: 'Socialförsäkringsbalken (2010:110)', text: 'The Social Insurance Code governs the conditions for all social insurance benefits administered by Försäkringskassan.', url: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialforsakringsbalk-2010110_sfs-2010-110/' },
+    ]
+  };
+
+  const BENEFIT_LABELS = {
+    carrier: { label: 'Carrier allowance', icon: '🦠' },
+    sick:    { label: 'Sick pay', icon: '🤒' },
+    parental:{ label: 'Parental leave', icon: '👶' },
+    disability:{ label: 'Disability allowance', icon: '♿' },
+  };
+
+  function getGuidelines(app) {
+    const assess = (app.agent_assessment || '').toLowerCase();
+    if (assess.includes('carrier') || assess.includes('smittbärare') || assess.includes('covid') || assess.includes('infection')) return GUIDELINES.carrier;
+    if (assess.includes('sick') || assess.includes('illness')) return GUIDELINES.sick;
+    if (assess.includes('parental') || assess.includes('baby')) return GUIDELINES.parental;
+    if (assess.includes('disability')) return GUIDELINES.disability;
+    return GUIDELINES.carrier; // default for demo
+  }
+
+  function getBenefitType(app) {
+    const assess = (app.agent_assessment || '').toLowerCase();
+    if (assess.includes('carrier') || assess.includes('covid') || assess.includes('smittbärare')) return 'carrier';
+    if (assess.includes('sick')) return 'sick';
+    if (assess.includes('parental')) return 'parental';
+    if (assess.includes('disability')) return 'disability';
+    return 'carrier';
+  }
 
   async function api(path, opts = {}) {
     const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation', ...(opts.headers||{}) },
-      ...opts
+      headers: {
+        'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'return=representation',
+        ...(opts.headers || {})
+      }, ...opts
     });
     return r.json();
   }
-
-  let docCache = {};
 
   async function viewDoc(appId, docType) {
     const key = appId + '_' + docType;
@@ -122,13 +429,12 @@
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
       const docs = await r.json();
-      if (!Array.isArray(docs) || !docs[0] || !docs[0].file_data) { alert('Document not found. Please run a new demo to generate documents.'); return; }
+      if (!Array.isArray(docs) || !docs[0] || !docs[0].file_data) { alert('Document not found. Please run a new demo.'); return; }
       docCache[key] = docs[0];
     }
     const doc = docCache[key];
     const w = window.open('', '_blank');
     w.document.write('<html><body style="margin:0"><iframe src="' + doc.file_data + '" style="width:100%;height:100vh;border:none"></iframe></body></html>');
-    w.document.title = doc.filename || docType + ' certificate';
   }
 
   async function downloadDoc(appId, docType) {
@@ -140,20 +446,17 @@
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
       const docs = await r.json();
-      if (!Array.isArray(docs) || !docs[0] || !docs[0].file_data) { alert('Document not found. Please run a new demo to generate documents.'); return; }
+      if (!Array.isArray(docs) || !docs[0] || !docs[0].file_data) { alert('Document not found.'); return; }
       docCache[key] = docs[0];
     }
     const doc = docCache[key];
     const a = document.createElement('a');
-    a.href = doc.file_data;
-    a.download = doc.filename || docType + '_certificate.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = doc.file_data; a.download = doc.filename || docType + '_certificate.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
   async function loadApplications() {
-    document.getElementById('app-list').innerHTML = '<div style="padding:20px;color:#aaa;font-size:13px">Loading...</div>';
+    document.getElementById('app-list').innerHTML = '<div style="padding:20px;color:var(--fk-grey-500);font-size:13px">Loading…</div>';
     const apps = await api('applications?select=*&order=created_at.desc');
     applications = Array.isArray(apps) ? apps : [];
     document.getElementById('app-count').textContent = applications.length;
@@ -164,57 +467,108 @@
 
   function renderList() {
     const list = document.getElementById('app-list');
-    if (!applications.length) { list.innerHTML = '<div style="padding:20px;color:#aaa;font-size:13px">No applications found.</div>'; return; }
+    if (!applications.length) { list.innerHTML = '<div style="padding:20px;color:var(--fk-grey-500);font-size:13px">No applications found.</div>'; return; }
     list.innerHTML = applications.map(app => {
       const c = customers[app.personnummer];
       const name = c ? c.full_name : app.personnummer;
       const date = new Date(app.created_at).toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
       const badge = app.status === 'approved' ? 'approved' : app.status === 'rejected' ? 'rejected' : 'pending';
       const label = app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : 'Pending Review';
-      return `<div class="app-item${app.id === selectedId ? ' selected':''}" onclick="selectApp('${app.id}')">
-        <div class="app-item-top"><span class="app-name">${esc(name)}</span><span class="app-time">${date}</span></div>
-        <div class="app-pnr">${app.personnummer}</div>
-        <span class="badge ${badge}">${label}</span>
+      const bt = getBenefitType(app);
+      const bl = BENEFIT_LABELS[bt] || { label: 'Benefit', icon: '📋' };
+      return `<div class="fk-app-item${app.id === selectedId ? ' selected':''}" onclick="selectApp('${app.id}')">
+        <div class="fk-app-top"><span class="fk-app-name">${esc(name)}</span><span class="fk-app-time">${date}</span></div>
+        <div class="fk-app-pnr">${app.personnummer}</div>
+        <div class="fk-app-meta">
+          <span class="fk-badge ${badge}">${label}</span>
+          <span class="fk-benefit-tag">${bl.icon} ${bl.label}</span>
+        </div>
       </div>`;
     }).join('');
   }
 
   function extractDocuments(chatLog, appComplete) {
-    // If application completed, both docs were definitely uploaded
     const medical = { found: appComplete || false, patient: 'Anna Lindqvist', id: '', diagnosis: 'COVID-19 Confirmed Carrier', from: '2026-03-15', to: '2026-03-25', doctor: 'Dr. Anna Bergström', hospital: 'Karolinska Hospital' };
     const employer = { found: appComplete || false, company: 'Volvo AB', employee: 'Anna Lindqvist', id: '', org: '556014-0440', role: 'Senior Engineer – Permanent', salary: '42,000 SEK/month', since: '2015-03-01' };
     if (!Array.isArray(chatLog)) return { medical, employer };
     for (const msg of chatLog) {
       const c = msg.content || '';
-      if (c.includes('MEDICAL_CERT_UPLOADED') || c.includes('medical certificate') && c.includes('COVID')) {
+      if (c.includes('MEDICAL_CERT_UPLOADED') || (c.includes('medical certificate') && c.includes('COVID'))) {
         medical.found = true;
-        const patMatch = c.match(/Patient[:\s]+([A-Za-z\s]+?)[\s,\(]/i);
         const idMatch = c.match(/(\d{8}-\d{4})/);
         const periodMatch = c.match(/(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/);
-        const docMatch = c.match(/Dr[.\s]+([A-Za-z\s]+?)(?:,|\.|\n|$)/i);
-        if (patMatch) medical.patient = patMatch[1].trim();
         if (idMatch) medical.id = idMatch[1];
         if (periodMatch) { medical.from = periodMatch[1]; medical.to = periodMatch[2]; }
-        if (docMatch) medical.doctor = 'Dr. ' + docMatch[1].trim();
-        medical.diagnosis = 'COVID-19 Confirmed Carrier';
-        medical.hospital = 'Karolinska Hospital';
       }
-      if (c.includes('EMPLOYER_CERT_UPLOADED') || c.includes('employer certificate') && c.includes('Volvo')) {
+      if (c.includes('EMPLOYER_CERT_UPLOADED') || (c.includes('employer certificate') && c.includes('Volvo'))) {
         employer.found = true;
-        const empMatch = c.match(/Employee[:\s]+([A-Za-z\s]+?)[\s,\(]/i);
-        const idMatch = c.match(/(\d{8}-\d{4})/);
-        const orgMatch = c.match(/[Oo]rg[.:\s]+(\d{6}-\d{4})/);
+        const orgMatch = c.match(/org[.:\s]+(\d{6}-\d{4})/i);
         const salMatch = c.match(/(\d{4,6})\s*SEK/i);
-        if (empMatch) employer.employee = empMatch[1].trim();
-        if (idMatch) employer.id = idMatch[1];
         if (orgMatch) employer.org = orgMatch[1];
         if (salMatch) employer.salary = salMatch[1] + ' SEK/month';
-        employer.company = 'Volvo AB';
-        employer.role = 'Senior Engineer – Permanent';
-        employer.since = '2015-03-01';
       }
     }
     return { medical, employer };
+  }
+
+  function generateDecisionLetter(app, customer, decision) {
+    const c = customer || {};
+    const name = c.full_name || app.personnummer;
+    const date = new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'});
+    const bt = getBenefitType(app);
+    const bl = BENEFIT_LABELS[bt] || { label: 'benefit', icon: '📋' };
+
+    if (decision === 'approved') {
+      return `DECISION LETTER – FRAMTIDSKASSAN (Student Prototype)
+═══════════════════════════════════════════════════
+
+Date: ${date}
+Reference: APP-${app.id.substring(0,8).toUpperCase()}
+
+To: ${name}
+Personal ID: ${app.personnummer}
+
+SUBJECT: Decision on your application for ${bl.label}
+
+Dear ${name.split(' ')[0]},
+
+We have reviewed your application for ${bl.label} submitted via Framtidskassan.
+
+DECISION: YOUR APPLICATION IS APPROVED ✓
+
+Based on the submitted documentation and the AI agent's assessment, your application fulfils the requirements set out in the Social Insurance Code (Socialförsäkringsbalken 2010:110).
+
+Your compensation will be calculated based on your qualifying income and the period covered by your medical certificate.
+
+For questions, contact your caseworker.
+
+This is a student prototype decision — not legally binding.
+Framtidskassan · framtidskassan.se`;
+    } else {
+      return `DECISION LETTER – FRAMTIDSKASSAN (Student Prototype)
+═══════════════════════════════════════════════════
+
+Date: ${date}
+Reference: APP-${app.id.substring(0,8).toUpperCase()}
+
+To: ${name}
+Personal ID: ${app.personnummer}
+
+SUBJECT: Decision on your application for ${bl.label}
+
+Dear ${name.split(' ')[0]},
+
+We have reviewed your application for ${bl.label}.
+
+DECISION: YOUR APPLICATION IS REJECTED ✗
+
+Your application does not currently fulfil the requirements. The caseworker's notes contain details on the reason for rejection.
+
+You have the right to appeal this decision within three weeks of receiving this letter.
+
+This is a student prototype decision — not legally binding.
+Framtidskassan · framtidskassan.se`;
+    }
   }
 
   async function selectApp(id) {
@@ -223,125 +577,175 @@
     const app = applications.find(a => a.id === id);
     if (!app) return;
     const c = customers[app.personnummer];
-    // Parse chat_log string if needed for document extraction
+
     let rawLog = app.chat_log;
     if (typeof rawLog === 'string') { try { rawLog = JSON.parse(rawLog); } catch(e) { rawLog = []; } }
-    const appComplete = app.agent_assessment && app.agent_assessment.toLowerCase().includes("application is complete"); const { medical, employer } = extractDocuments(rawLog, appComplete);
+    const appComplete = app.agent_assessment && app.agent_assessment.toLowerCase().includes('application is complete');
+    const { medical, employer } = extractDocuments(rawLog, appComplete);
 
-    // Chat log
-    // Parse chat_log if stored as string
     let chatLog = app.chat_log;
     if (typeof chatLog === 'string') { try { chatLog = JSON.parse(chatLog); } catch(e) { chatLog = []; } }
-    let chatHtml = '<div style="color:#aaa;font-size:13px;padding:8px 0">No conversation recorded.</div>';
+
+    // Chat HTML
+    let chatHtml = '<div style="color:var(--fk-grey-500);font-size:13px;padding:8px 0">No conversation recorded.</div>';
     if (Array.isArray(chatLog) && chatLog.length > 0) {
       chatHtml = chatLog.map(msg => {
         const isAgent = msg.role === 'assistant';
-        const content = esc(msg.content || '');
-        return `<div class="chat-msg ${isAgent ? 'agent' : 'user'}">
-          <div class="chat-avatar">${isAgent ? 'FK' : 'You'}</div>
-          <div class="chat-bubble">${content}</div>
+        return `<div class="fk-chat-msg ${isAgent ? 'agent' : 'user'}">
+          <div class="fk-chat-avatar">${isAgent ? 'FK' : 'You'}</div>
+          <div class="fk-chat-bubble">${esc(msg.content || '')}</div>
         </div>`;
       }).join('');
     }
 
-    // Documents
-    // Fetch actual documents from Supabase
+    // Documents from Supabase
     let docLinks = {};
     try {
       const docsResp = await fetch(SUPABASE_URL + '/rest/v1/documents?personnummer=eq.' + app.personnummer + '&select=*&order=created_at.desc', {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
       });
       const docs = await docsResp.json();
-      if (Array.isArray(docs)) {
-        docs.forEach(d => { if (!docLinks[d.doc_type]) docLinks[d.doc_type] = d; });
-      }
-    } catch(e) { console.error('Doc fetch error:', e); }
+      if (Array.isArray(docs)) docs.forEach(d => { if (!docLinks[d.doc_type]) docLinks[d.doc_type] = d; });
+    } catch(e) {}
 
+    // Document cards
     const medHtml = medical.found ? `
-      <div class="doc-card medical">
-        <div class="doc-card-header"><div class="doc-icon">🏥</div><div class="doc-type">Medical Certificate</div></div>
-        <div class="doc-row"><span class="doc-label">Patient:</span><span class="doc-val">${esc(medical.patient||'Anna Lindqvist')}</span></div>
-        <div class="doc-row"><span class="doc-label">ID:</span><span class="doc-val">${esc(medical.id||app.personnummer)}</span></div>
-        <div class="doc-row"><span class="doc-label">Diagnosis:</span><span class="doc-val">${esc(medical.diagnosis||'COVID-19')}</span></div>
-        <div class="doc-row"><span class="doc-label">Period:</span><span class="doc-val">${esc(medical.from||'2026-03-15')} to ${esc(medical.to||'2026-03-25')}</span></div>
-        <div class="doc-row"><span class="doc-label">Doctor:</span><span class="doc-val">${esc(medical.doctor||'Dr. Anna Bergström')}</span></div>
-        <div class="doc-row"><span class="doc-label">Hospital:</span><span class="doc-val">${esc(medical.hospital||'Karolinska Hospital')}</span></div>
-        <div class="doc-status">✓ Validated – Period covers absence</div>
-        ${docLinks.medical ? `<div class="doc-actions"><button class="doc-btn" onclick="viewDoc('${app.id}','medical')">👁 View</button><button class="doc-btn" onclick="downloadDoc('${app.id}','medical')">⬇ Download</button></div>` : ''}
-      </div>` : `<div class="no-doc">📄 Medical certificate not uploaded</div>`;
+      <div class="fk-doc-card medical">
+        <div class="fk-doc-header"><div class="fk-doc-icon">🏥</div><div class="fk-doc-type">Medical Certificate</div></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Patient:</span><span class="fk-doc-val">${esc(medical.patient)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">ID:</span><span class="fk-doc-val">${esc(medical.id || app.personnummer)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Diagnosis:</span><span class="fk-doc-val">${esc(medical.diagnosis)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Period:</span><span class="fk-doc-val">${esc(medical.from)} → ${esc(medical.to)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Doctor:</span><span class="fk-doc-val">${esc(medical.doctor)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Hospital:</span><span class="fk-doc-val">${esc(medical.hospital)}</span></div>
+        <div class="fk-doc-status">✓ Validated – period covers absence</div>
+        ${docLinks.medical ? `<div class="fk-doc-actions"><button class="fk-doc-btn" onclick="viewDoc('${app.id}','medical')">👁 View</button><button class="fk-doc-btn" onclick="downloadDoc('${app.id}','medical')">⬇ Download</button></div>` : ''}
+      </div>` : `<div class="fk-no-doc">📄 Medical certificate not uploaded</div>`;
 
     const empHtml = employer.found ? `
-      <div class="doc-card employer">
-        <div class="doc-card-header"><div class="doc-icon">🏢</div><div class="doc-type">Employer Certificate</div></div>
-        <div class="doc-row"><span class="doc-label">Employee:</span><span class="doc-val">${esc(employer.employee||'Anna Lindqvist')}</span></div>
-        <div class="doc-row"><span class="doc-label">ID:</span><span class="doc-val">${esc(employer.id||app.personnummer)}</span></div>
-        <div class="doc-row"><span class="doc-label">Employer:</span><span class="doc-val">${esc(employer.company||'Volvo AB')}</span></div>
-        <div class="doc-row"><span class="doc-label">Org No:</span><span class="doc-val">${esc(employer.org||'556014-0440')}</span></div>
-        <div class="doc-row"><span class="doc-label">Role:</span><span class="doc-val">${esc(employer.role||'Senior Engineer')}</span></div>
-        <div class="doc-row"><span class="doc-label">Salary:</span><span class="doc-val">${esc(employer.salary||'42,000 SEK/month')}</span></div>
-        <div class="doc-row"><span class="doc-label">Since:</span><span class="doc-val">${esc(employer.since||'2015-03-01')}</span></div>
-        <div class="doc-status">✓ Validated – Employer confirmed</div>
-        ${docLinks.employer ? `<div class="doc-actions"><button class="doc-btn" onclick="viewDoc('${app.id}','employer')">👁 View</button><button class="doc-btn" onclick="downloadDoc('${app.id}','employer')">⬇ Download</button></div>` : ''}
-      </div>` : `<div class="no-doc">📄 Employer certificate not uploaded</div>`;
+      <div class="fk-doc-card employer">
+        <div class="fk-doc-header"><div class="fk-doc-icon">🏢</div><div class="fk-doc-type">Employer Certificate</div></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Employee:</span><span class="fk-doc-val">${esc(employer.employee)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Employer:</span><span class="fk-doc-val">${esc(employer.company)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Org No:</span><span class="fk-doc-val">${esc(employer.org)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Role:</span><span class="fk-doc-val">${esc(employer.role)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Salary:</span><span class="fk-doc-val">${esc(employer.salary)}</span></div>
+        <div class="fk-doc-row"><span class="fk-doc-label">Since:</span><span class="fk-doc-val">${esc(employer.since)}</span></div>
+        <div class="fk-doc-status">✓ Validated – employer confirmed</div>
+        ${docLinks.employer ? `<div class="fk-doc-actions"><button class="fk-doc-btn" onclick="viewDoc('${app.id}','employer')">👁 View</button><button class="fk-doc-btn" onclick="downloadDoc('${app.id}','employer')">⬇ Download</button></div>` : ''}
+      </div>` : `<div class="fk-no-doc">📄 Employer certificate not uploaded</div>`;
 
-    const isComplete = (app.agent_assessment||'').toLowerCase().includes('complete');
+    // Guideline citations
+    const guidelines = getGuidelines(app);
+    const guidelineHtml = guidelines.map(g => `
+      <div class="fk-guideline-item">
+        <div class="fk-guideline-ref">📖 ${g.ref}</div>
+        <div class="fk-guideline-text">${g.text}</div>
+        <a href="${g.url}" target="_blank" class="fk-guideline-link">→ View source (riksdagen.se)</a>
+      </div>`).join('');
+
+    const isComplete = (app.agent_assessment || '').toLowerCase().includes('complete');
     const badge = app.status === 'approved' ? 'approved' : app.status === 'rejected' ? 'rejected' : 'pending';
-    const label = app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : 'Pending Review';
+    const badgeLabel = app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : 'Pending Review';
     const date = new Date(app.created_at).toLocaleString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const bt = getBenefitType(app);
+    const bl = BENEFIT_LABELS[bt] || { label: 'Benefit', icon: '📋' };
 
     document.getElementById('main-content').innerHTML = `
-      <div class="card">
-        <div class="card-title">Customer Information</div>
-        <div class="info-grid">
-          <div class="info-item"><label>Name</label><span>${c ? esc(c.full_name) : '–'}</span></div>
-          <div class="info-item"><label>Personal ID</label><span>${app.personnummer}</span></div>
-          <div class="info-item"><label>Email</label><span>${c ? esc(c.email) : '–'}</span></div>
-          <div class="info-item"><label>Phone</label><span>${c ? esc(c.phone) : '–'}</span></div>
-          <div class="info-item"><label>Employer</label><span>${c ? esc(c.employer) : '–'}</span></div>
-          <div class="info-item"><label>Employment Type</label><span>${c ? esc(c.employment_type) : '–'}</span></div>
-          <div class="info-item"><label>Monthly Income</label><span>${c ? c.monthly_income + ' SEK' : '–'}</span></div>
-          <div class="info-item"><label>Status</label><span class="badge ${badge}">${label}</span></div>
+      <!-- Customer & Application Info -->
+      <div class="fk-card">
+        <div class="fk-card-title">Customer Information</div>
+        <div class="fk-info-grid">
+          <div class="fk-info-item"><label>Name</label><span>${c ? esc(c.full_name) : '–'}</span></div>
+          <div class="fk-info-item"><label>Personal ID</label><span>${app.personnummer}</span></div>
+          <div class="fk-info-item"><label>Email</label><span>${c ? esc(c.email) : '–'}</span></div>
+          <div class="fk-info-item"><label>Phone</label><span>${c ? esc(c.phone) : '–'}</span></div>
+          <div class="fk-info-item"><label>Employer</label><span>${c ? esc(c.employer) : '–'}</span></div>
+          <div class="fk-info-item"><label>Employment Type</label><span>${c ? esc(c.employment_type) : '–'}</span></div>
+          <div class="fk-info-item"><label>Monthly Income</label><span>${c ? c.monthly_income + ' SEK' : '–'}</span></div>
+          <div class="fk-info-item"><label>Status</label>
+            <span class="fk-badge ${badge}" style="font-size:13px">${badgeLabel}</span>
+          </div>
         </div>
       </div>
 
-      
-      <div class="card">
-        <div class="card-title">Uploaded Documents</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${medHtml}${empHtml}</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Conversation with AI Agent</div>
-        <div class="chat-log">${chatHtml}</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">AI Agent Assessment</div>
-        <div class="assessment-box ${isComplete ? 'complete' : ''}">${esc(app.agent_assessment || 'No assessment recorded.')}</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Uploaded Documents</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${medHtml}${empHtml}</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Application Details</div>
-        <div class="info-grid">
-          <div class="info-item"><label>Application ID</label><span>${app.id.substring(0,8)}...</span></div>
-          <div class="info-item"><label>Submitted</label><span>${date}</span></div>
+      <!-- Benefit + Submission -->
+      <div class="fk-card">
+        <div class="fk-card-title">Application Details</div>
+        <div class="fk-info-grid">
+          <div class="fk-info-item"><label>Benefit Type</label><span>${bl.icon} ${bl.label}</span></div>
+          <div class="fk-info-item"><label>Application ID</label><span style="font-family:monospace;font-size:12px">${app.id.substring(0,8)}…</span></div>
+          <div class="fk-info-item"><label>Submitted</label><span>${date}</span></div>
+          <div class="fk-info-item"><label>Caseworker</label><span>–</span></div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Decision</div>
-        <textarea class="notes-textarea" id="notes-field" placeholder="Add caseworker notes here...">${esc(app.caseworker_notes||'')}</textarea>
-        <div class="action-row">
-          <button class="btn btn-approve" onclick="updateApp('${app.id}','approved')">✓ Approve Application</button>
-          <button class="btn btn-reject" onclick="updateApp('${app.id}','rejected')">✗ Reject Application</button>
-          <button class="btn btn-save" onclick="saveNotes('${app.id}')">💾 Save Notes</button>
-          <span class="status-msg" id="status-msg"></span>
+      <!-- Two-column: Chat left, Assessment+Guidelines right -->
+      <div class="fk-two-col">
+        <div class="fk-card">
+          <div class="fk-card-title">Conversation with AI Agent</div>
+          <div class="fk-chat-log">${chatHtml}</div>
         </div>
+
+        <div>
+          <div class="fk-card" style="margin-bottom:16px">
+            <div class="fk-card-title">AI Agent Assessment</div>
+            <div class="fk-assessment ${isComplete ? 'complete' : ''}">${esc(app.agent_assessment || 'No assessment recorded.')}</div>
+          </div>
+          <div class="fk-card">
+            <div class="fk-card-title">📖 Guideline References</div>
+            <div class="fk-guideline-box">
+              <div class="fk-guideline-title">⚖️ Applicable rules for ${bl.label}</div>
+              ${guidelineHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents -->
+      <div class="fk-card">
+        <div class="fk-card-title">Uploaded Documents</div>
+        <div class="fk-docs-grid">${medHtml}${empHtml}</div>
+      </div>
+
+      <!-- Decision -->
+      <div class="fk-card">
+        <div class="fk-card-title">Decision Checklist</div>
+        <div class="fk-checklist">
+          <div class="fk-check-item">
+            <input type="checkbox" id="chk1" ${medical.found ? 'checked' : ''}>
+            <label for="chk1">Medical certificate present and covers the absence period</label>
+          </div>
+          <div class="fk-check-item">
+            <input type="checkbox" id="chk2" ${employer.found ? 'checked' : ''}>
+            <label for="chk2">Employer certificate confirms income loss</label>
+          </div>
+          <div class="fk-check-item">
+            <input type="checkbox" id="chk3" ${isComplete ? 'checked' : ''}>
+            <label for="chk3">AI agent assessment is complete and consistent</label>
+          </div>
+          <div class="fk-check-item">
+            <input type="checkbox" id="chk4">
+            <label for="chk4">Caseworker has manually reviewed all attached documents</label>
+          </div>
+          <div class="fk-check-item">
+            <input type="checkbox" id="chk5">
+            <label for="chk5">Compensation amount has been verified as reasonable</label>
+          </div>
+        </div>
+
+        <label style="font-size:13px;font-weight:700;color:var(--fk-grey-700);display:block;margin-bottom:6px;">Caseworker Notes</label>
+        <textarea class="fk-notes-textarea" id="notes-field" placeholder="Add assessment notes, observations, or reasons for decision…">${esc(app.caseworker_notes || '')}</textarea>
+
+        <div class="fk-action-row">
+          <button class="fk-btn fk-btn-approve" onclick="updateApp('${app.id}','approved')">✓ Approve</button>
+          <button class="fk-btn fk-btn-reject" onclick="updateApp('${app.id}','rejected')">✗ Reject</button>
+          <button class="fk-btn fk-btn-save" onclick="saveNotes('${app.id}')">💾 Save Notes</button>
+          <button class="fk-btn fk-btn-outline" onclick="previewLetter('${app.id}')">📄 Preview Decision Letter</button>
+          <span class="fk-status-msg" id="status-msg"></span>
+        </div>
+
+        <div class="fk-letter-preview" id="letter-preview"></div>
       </div>`;
   }
 
@@ -350,8 +754,10 @@
     await api('applications?id=eq.' + id, { method: 'PATCH', body: JSON.stringify({ status, caseworker_notes: notes }) });
     const app = applications.find(a => a.id === id);
     if (app) { app.status = status; app.caseworker_notes = notes; }
-    showMsg('✓ Application ' + status + '!');
+    showMsg(status === 'approved' ? '✓ Application approved!' : '✗ Application rejected!');
     renderList();
+    // Show the decision letter automatically after decision
+    previewLetter(id, status);
     selectApp(id);
   }
 
@@ -361,6 +767,17 @@
     const app = applications.find(a => a.id === id);
     if (app) app.caseworker_notes = notes;
     showMsg('✓ Notes saved!');
+  }
+
+  function previewLetter(id, forcedStatus) {
+    const app = applications.find(a => a.id === id);
+    if (!app) return;
+    const c = customers[app.personnummer];
+    const status = forcedStatus || app.status || 'pending';
+    if (status === 'pending') { showMsg('Make a decision first to generate the letter.'); return; }
+    const letter = generateDecisionLetter(app, c, status);
+    const el = document.getElementById('letter-preview');
+    if (el) { el.textContent = letter; el.classList.add('visible'); }
   }
 
   function showMsg(msg) {
