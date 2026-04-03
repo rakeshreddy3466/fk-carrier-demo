@@ -696,6 +696,7 @@
   Framtidskassan – Student Prototype · Not an official government service · For demonstration purposes only
 </footer>
 
+
 <script>
   const WEBHOOK_URL = 'https://demoprototype.app.n8n.cloud/webhook/fk-carrier-chat';
   const SUPABASE_URL = 'https://kmgyuwmixsdxtpxorrzc.supabase.co';
@@ -737,7 +738,7 @@
       const score = def.keywords.filter(k => lower.includes(k)).length;
       if (score > bestScore) { bestScore = score; best = key; }
     }
-    return bestScore > 0 ? best : 'carrier'; // default to carrier for demo
+    return bestScore > 0 ? best : 'carrier';
   }
 
   function selectBenefit(key) {
@@ -751,9 +752,7 @@
     const text = document.getElementById('needs-input').value.trim();
     detectedBenefit = selectedBenefitManual || (text ? detectBenefit(text) : 'carrier');
     const b = BENEFITS[detectedBenefit];
-
-    document.getElementById('detected-benefit-text').textContent =
-      'Detected benefit: ' + b.icon + ' ' + b.label;
+    document.getElementById('detected-benefit-text').textContent = 'Detected benefit: ' + b.icon + ' ' + b.label;
     document.getElementById('needs-screen').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
     setStep(1);
@@ -819,12 +818,10 @@
         document.getElementById('customer-banner').classList.remove('hidden');
         document.getElementById('customer-name').textContent = res.customerName || personnummer;
       }
-      // Show active benefit banner
       const b = BENEFITS[detectedBenefit];
       document.getElementById('active-benefit-banner').classList.remove('hidden');
       document.getElementById('active-benefit-icon').textContent = b.icon;
       document.getElementById('active-benefit-label').textContent = 'Processing: ' + b.label;
-
       document.getElementById('chat-card').classList.remove('hidden');
       chatHistory = res.chatHistory || [];
       setStep(2);
@@ -837,7 +834,7 @@
     }
   }
 
-  // ── File upload ──────────────────────────────────────────────
+  // ── File upload — REAL document validation ───────────────────
   function getDocType(filename) {
     const f = filename.toLowerCase();
     if (f.includes('medical') || f.includes('doctor') || f.includes('lak') || f.includes('med')) return 'medical';
@@ -852,32 +849,120 @@
     if (!file) return;
     event.target.value = '';
     const docType = getDocType(file.name);
-    if (docType === 'medical') medicalUploaded = true;
-    else employerUploaded = true;
-    uploadDocToSupabase(file, docType);
 
+    // Show "reading…" bubble immediately
     const c = document.getElementById('chat-messages');
-    const el = document.createElement('div');
-    el.className = 'fk-file-bubble ' + docType;
-    let ocrLines, msg;
-    if (docType === 'medical') {
-      ocrLines = ['👤 Patient: Anna Lindqvist (19700101-1234)','🦠 Diagnosis: COVID-19 Confirmed Carrier','📅 Period: 2026-03-15 to 2026-03-25','👩‍⚕️ Dr. Anna Bergström, Karolinska Hospital','✅ Fully covers absence period'];
-      msg = 'MEDICAL_CERT_UPLOADED: Patient Anna Lindqvist 19700101-1234. COVID-19 carrier. Period 2026-03-15 to 2026-03-25. Doctor: Dr Anna Bergstrom, Karolinska Hospital.' + (employerUploaded ? ' EMPLOYER_CERT_ALREADY_UPLOADED.' : '');
-    } else {
-      ocrLines = ['👤 Employee: Anna Lindqvist (19700101-1234)','🏢 Employer: Volvo AB (Org: 556014-0440)','💼 Senior Engineer – Permanent','💰 SEK 42,000 per month','📅 Since 2015-03-01'];
-      msg = 'EMPLOYER_CERT_UPLOADED: Employee Anna Lindqvist 19700101-1234. Employer Volvo AB org 556014-0440. Senior Engineer. Permanent. 42000 SEK/month. Since 2015-03-01.' + (medicalUploaded ? ' MEDICAL_CERT_ALREADY_UPLOADED.' : '');
-    }
-    el.innerHTML = `
+    const uploadBubble = document.createElement('div');
+    uploadBubble.className = 'fk-file-bubble ' + docType;
+    uploadBubble.id = 'upload-bubble-pending';
+    uploadBubble.innerHTML = `
       <div class="fk-file-icon">${docType === 'medical' ? '🏥' : '🏢'}</div>
       <div>
-        <strong>${file.name} <span class="fk-ocr-badge">✓ OCR</span></strong>
+        <strong>${file.name}</strong>
         <div class="fk-file-type">${docType === 'medical' ? 'Medical Certificate' : 'Employer Certificate'}</div>
-        <div class="fk-ocr-data">${ocrLines.join('<br>')}</div>
+        <div class="fk-ocr-data" id="ocr-status">⏳ Reading and validating document contents…</div>
       </div>`;
-    c.appendChild(el);
+    c.appendChild(uploadBubble);
     c.scrollTop = c.scrollHeight;
+
+    // Read as base64 (strip data URI prefix)
+    let base64Data;
+    try {
+      base64Data = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result.split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+    } catch(e) {
+      document.getElementById('ocr-status').textContent = '❌ Could not read file.';
+      return;
+    }
+
+    // Save to Supabase in background
+    uploadDocToSupabase(file, docType);
+
+    if (docType === 'medical') medicalUploaded = true;
+    else employerUploaded = true;
+
     setStep(3);
-    await sendToAgent(msg);
+    showTyping();
+    isWaiting = true;
+    document.getElementById('send-btn').disabled = true;
+
+    try {
+      const res = await callWebhookWithDoc(docType, base64Data, file.type || 'application/pdf', file.name);
+      chatHistory = res.chatHistory || chatHistory;
+      hideTyping();
+
+      // Update bubble with real extracted summary from agent
+      const pending = document.getElementById('upload-bubble-pending');
+      if (pending) {
+        pending.id = '';
+        const statusEl = pending.querySelector('#ocr-status');
+        if (statusEl) {
+          statusEl.id = '';
+          statusEl.innerHTML = res.extractedSummary
+            ? '<span class="fk-ocr-badge">✓ AI Validated</span> ' + res.extractedSummary
+            : '<span class="fk-ocr-badge">✓ AI Read</span> Document processed — see response below.';
+        }
+      }
+
+      appendMessage('agent', res.reply);
+
+      if (res.isComplete) {
+        setStep(5);
+        document.getElementById('complete-banner').classList.remove('hidden');
+        document.getElementById('chat-input').disabled = true;
+        document.getElementById('send-btn').disabled = true;
+        try {
+          await sb('applications?personnummer=eq.' + personnummer + '&order=created_at.desc&limit=1', {
+            method: 'PATCH', body: JSON.stringify({ chat_log: chatHistory })
+          });
+        } catch(e) {}
+      } else {
+        const r = (res.reply || '').toLowerCase();
+        if (r.includes('sending it to a caseworker') || r.includes('application is complete')) setStep(4);
+        else setStep(3);
+      }
+    } catch(e) {
+      hideTyping();
+      const pending = document.getElementById('upload-bubble-pending');
+      if (pending) {
+        pending.id = '';
+        const statusEl = pending.querySelector('#ocr-status');
+        if (statusEl) { statusEl.id = ''; statusEl.textContent = '❌ Validation failed. Please try again.'; }
+      }
+      appendMessage('agent', 'Something went wrong processing your document. Please try again.');
+      console.error('doc upload error:', e);
+    }
+    isWaiting = false;
+    document.getElementById('send-btn').disabled = false;
+  }
+
+  // ── Webhook call WITH real document (base64) ─────────────────
+  async function callWebhookWithDoc(docType, base64Data, mimeType, filename) {
+    const response = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personnummer,
+        message: '__DOCUMENT_UPLOAD__',
+        chatHistory: chatHistory.slice(-6),
+        sessionId,
+        benefitType: detectedBenefit || 'carrier',
+        document: {
+          docType,
+          base64: base64Data,
+          mimeType,
+          filename
+        }
+      })
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const raw = (await response.text()).trim();
+    if (!raw || raw === '{}' || raw === '') throw new Error('Empty response from n8n');
+    return parseResponse(raw);
   }
 
   // ── Messaging ────────────────────────────────────────────────
@@ -907,10 +992,9 @@
         document.getElementById('send-btn').disabled = true;
         try {
           await sb('applications?personnummer=eq.' + personnummer + '&order=created_at.desc&limit=1', {
-            method: 'PATCH',
-            body: JSON.stringify({ chat_log: chatHistory })
+            method: 'PATCH', body: JSON.stringify({ chat_log: chatHistory })
           });
-        } catch(e) { console.log('Chat save error:', e); }
+        } catch(e) {}
       } else {
         const r = (res.reply || '').toLowerCase();
         if (r.includes('sending it to a caseworker') || r.includes('application is complete')) setStep(4);
